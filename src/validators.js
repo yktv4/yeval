@@ -35,16 +35,23 @@ const allOfRulesAsync = rules => {
 
 const when = (predicate, rules) => {
   return (value, data) => {
-    if (predicate(value, data)) {
+    let shouldExecute;
+    if (typeof predicate === 'boolean') {
+      shouldExecute = predicate;
+    } else {
+      shouldExecute = predicate(value, data);
+    }
+
+    if (shouldExecute) {
       return allOfRules(rules)(value, data);
     }
   };
 };
 
-const whenAsync = (asyncPredicate, rules) => {
+const whenAsync = (predicate, rules) => {
   return (value, data) => {
     return Promise.resolve()
-      .then(() => asyncPredicate(value, data))
+      .then(() => typeof predicate === 'boolean' ? predicate : predicate(value, data))
       .then(shouldExecute => {
         if (shouldExecute) {
           return allOfRulesAsync(rules)(value, data);
