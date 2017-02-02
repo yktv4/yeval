@@ -4,7 +4,7 @@
   "description": "Dead simple javascript validation",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "NODE_ENV=test ./node_modules/mocha/bin/mocha"
   },
   "repository": {
     "type": "git",
@@ -18,6 +18,11 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/yktv4/yeval/issues"
+  },
+  "devDependencies": {
+    "lodash": "^4.17.4",
+    "mocha": "^3.2.0",
+    "should": "^11.2.0"
   },
   "homepage": "https://github.com/yktv4/yeval#readme"
 }
