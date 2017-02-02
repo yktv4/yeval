@@ -174,6 +174,18 @@ const oneOfArray = (enumeration) => {
   };
 };
 
+const matches = what => value => {
+  if (value != what) {
+    return `Must match ${what}`;
+  }
+};
+
+const matchesStrict = what => value => {
+  if (value !== what) {
+    return `Must strictly match ${what}`;
+  }
+};
+
 module.exports = {
   isEmpty,
   notEmpty,
@@ -200,4 +212,6 @@ module.exports = {
   isBoolean,
   isString,
   oneOfArray,
+  matches,
+  matchesStrict,
 };
