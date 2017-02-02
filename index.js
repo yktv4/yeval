@@ -2,5 +2,5 @@
 
 module.exports = {
   create: require('./src/create-validator'),
-  validators: require('./src/validators'),
+  rules: require('./src/rules'),
 };

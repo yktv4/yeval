@@ -75,7 +75,7 @@ const oneOfRules = rules => {
  */
 
 const email = (value) => {
-  if (!isEmpty(value) && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]+$/i.test(value)) {
+  if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]+$/i.test(value)) {
     return 'Enter valid email address';
   }
 };
@@ -181,15 +181,15 @@ const oneOfArray = (enumeration) => {
   };
 };
 
-const matches = what => value => {
-  if (value != what) {
-    return `Must match ${what}`;
+const equals = toWhat => value => {
+  if (value !== toWhat) {
+    return `Must match ${toWhat}`;
   }
 };
 
-const matchesStrict = what => value => {
-  if (value !== what) {
-    return `Must strictly match ${what}`;
+const matches = fieldName => (value, data) => {
+  if (data[fieldName] !== value) {
+    return `Must match ${fieldName}`;
   }
 };
 
@@ -219,6 +219,6 @@ module.exports = {
   isBoolean,
   isString,
   oneOfArray,
+  equals,
   matches,
-  matchesStrict,
 };
