@@ -98,6 +98,12 @@ const isArray = (value) => {
   }
 };
 
+const isObject = (value) => {
+  if (!(typeof value === 'object' && value.toString() === '[object Object]')) {
+    return 'Must be an object';
+  }
+};
+
 const minLength = (min) => {
   return value => {
     if (!isEmpty(value) && value.length < min) {
@@ -183,6 +189,7 @@ module.exports = {
   date,
   isAlpha,
   isArray,
+  isObject,
   minLength,
   maxLength,
   minValue,
