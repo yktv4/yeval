@@ -86,10 +86,16 @@ const required = (value, data) => {
   }
 };
 
-const date = (value, data) => {
+const isDate = (value, data) => {
   const dateRegexp = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegexp.test(value)) {
-    return 'Please enter a valid date(mm-dd-yyyy)';
+    return 'Please enter a valid date(yyyy-mm-dd)';
+  }
+};
+
+const isDateInstance = (value, data) => {
+  if (!value instanceof Date) {
+    return 'Please enter a valid date';
   }
 };
 
@@ -205,7 +211,8 @@ module.exports = {
   oneOfRules,
   email,
   required,
-  date,
+  isDate,
+  isDateInstance,
   isAlpha,
   isArray,
   isObject,
