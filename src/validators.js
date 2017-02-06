@@ -94,7 +94,7 @@ const isDate = (value, data) => {
 };
 
 const isDateInstance = (value, data) => {
-  if (!value instanceof Date) {
+  if (!(value instanceof Date)) {
     return 'Please enter a valid date';
   }
 };
