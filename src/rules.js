@@ -14,20 +14,20 @@ const isDefined = value => value !== undefined;
 
 const msgFor = (rule, msg) => (value, data) => rule(value, data) ? msg : undefined;
 
-const allOfRules = rules => {
-  const rulesToApply = rules instanceof Array ? rules : [rules];
-  return (value, data) => {
-    return rulesToApply.map(rule => rule(value, data)).filter(err => !!err)[0];
-  };
-};
-
-const allOfRulesAsync = rules => {
+const allErrorsOfRules = rules => {
   const rulesToApply = rules instanceof Array ? rules : [rules];
   return (value, data) => {
     const promises = rulesToApply.map(rule => {
       return Promise.resolve().then(() => rule(value, data));
     });
-    return Promise.all(promises)
+    return Promise.all(promises);
+  };
+};
+
+const allOfRules = rules => {
+  const rulesToApply = rules instanceof Array ? rules : [rules];
+  return (value, data) => {
+    return allErrorsOfRules(rulesToApply)(value, data)
       .then(errors => errors.filter(err => !!err))
       .then(errors => errors[0]);
   };
@@ -35,37 +35,25 @@ const allOfRulesAsync = rules => {
 
 const when = (predicate, rules) => {
   return (value, data) => {
-    let shouldExecute;
-    if (typeof predicate === 'boolean') {
-      shouldExecute = predicate;
-    } else {
-      shouldExecute = predicate(value, data);
-    }
-
-    if (shouldExecute) {
-      return allOfRules(rules)(value, data);
-    }
-  };
-};
-
-const whenAsync = (predicate, rules) => {
-  return (value, data) => {
     return Promise.resolve()
       .then(() => typeof predicate === 'boolean' ? predicate : predicate(value, data))
       .then(shouldExecute => {
         if (shouldExecute) {
-          return allOfRulesAsync(rules)(value, data);
+          return allOfRules(rules)(value, data);
         }
       });
   };
 };
 
 const oneOfRules = rules => {
+  const rulesToApply = rules instanceof Array ? rules : [rules];
   return (value, data) => {
-    const errors = rules.map(rule => rule(value, data));
-    if (errors.filter(err => !err).length === 0) {
-      return errors.filter(err => !!err)[0];
-    }
+    return allErrorsOfRules(rulesToApply)(value, data)
+      .then(errors => {
+        if (errors.filter(err => !err).length === 0) {
+          return errors.filter(err => !!err)[0];
+        }
+      });
   };
 };
 
@@ -199,9 +187,7 @@ module.exports = {
   isDefined,
   msgFor,
   allOfRules,
-  allOfRulesAsync,
   when,
-  whenAsync,
   oneOfRules,
   email,
   required,

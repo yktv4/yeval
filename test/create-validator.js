@@ -3,7 +3,7 @@
 require('should');
 const _ = require('lodash');
 const yeval = require('./../index');
-const v = yeval.validators;
+const v = yeval.rules;
 
 describe('Validators creation', () => {
   const testValues = {
@@ -22,35 +22,18 @@ describe('Validators creation', () => {
     },
   };
 
-  it('should perform sync validation of an object with enclosed properties', () => {
-    const validate = yeval.create.validator({
-      deal: v.isString,
-      car: {
-        make: [v.oneOfArray(['BMW', 'Mercedes', 'Audi'])],
-        model: [v.oneOfArray(['3-er', '5-er', '7-er'])],
-        engine: {
-          displacement: v.isInteger,
-          cylinders: v.isInteger,
-        },
-      },
-      owner: {
-        name: v.isString,
-        surname: v.isString,
-      },
-    });
+  const notFailingAsyncValidationRule = () => Promise.resolve();
+  const failingAsyncValidationRule = () => Promise.resolve('Some error');
 
-    const errors = validate(testValues);
-    Object.keys(errors).should.have.lengthOf(0);
-  });
+  const validMakes = ['BMW', 'Mercedes', 'Audi'];
+  const validModels = ['3-er', '5-er', '7-er'];
 
-  it('should perform async validation of an object with enclosed properties', () => {
-    const notFailingAsyncValidationRule = (data, value) => Promise.resolve();
-
-    const validateAsync = yeval.create.asyncValidator({
+  it('should perform validation of an object with enclosed properties', () => {
+    const validateAsync = yeval.create({
       deal: [v.isString, notFailingAsyncValidationRule],
       car: {
-        make: [v.oneOfArray(['BMW', 'Mercedes', 'Audi']), notFailingAsyncValidationRule],
-        model: [v.oneOfArray(['3-er', '5-er', '7-er']), notFailingAsyncValidationRule],
+        make: [v.oneOfArray(validMakes), notFailingAsyncValidationRule],
+        model: [v.oneOfArray(validModels), notFailingAsyncValidationRule],
         engine: {
           displacement: [v.isInteger, notFailingAsyncValidationRule],
           cylinders: [v.isInteger, notFailingAsyncValidationRule],
@@ -69,44 +52,13 @@ describe('Validators creation', () => {
   });
 
   it('should populate errors object correctly when validation fails', () => {
-    const validate = yeval.create.validator({
-      deal: v.isString,
-      car: {
-        make: [v.oneOfArray(['BMW', 'Mercedes', 'Audi'])],
-        model: [v.oneOfArray(['3-er', '5-er', '7-er'])],
-        engine: {
-          displacement: v.isInteger,
-          cylinders: v.isInteger,
-        },
-      },
-      owner: {
-        name: v.isString,
-        surname: v.isString,
-      },
-    });
-
-    const thisCaseTestValues = _.cloneDeep(testValues);
-    delete thisCaseTestValues.car.engine.cylinders;
-    delete thisCaseTestValues.deal;
-
-    const errors = validate(thisCaseTestValues);
-    Object.keys(errors).should.have.lengthOf(2);
-
-    errors.car.engine.cylinders.should.be.a.String();
-    errors.deal.should.be.a.String();
-  });
-
-  it('should populate errors object correctly when async validation fails', () => {
-    const notFailingAsyncValidationRule = (data, value) => Promise.resolve();
-    const failingAsyncValidationRule = (data, value) => Promise.resolve('Some error');
-
-    const validateAsync = yeval.create.asyncValidator({
+    const validateAsync = yeval.create({
       deal: [v.isString, failingAsyncValidationRule],
       car: {
-        make: [v.oneOfArray(['BMW', 'Mercedes', 'Audi']), notFailingAsyncValidationRule],
-        model: [v.oneOfArray(['3-er', '5-er', '7-er']), notFailingAsyncValidationRule],
+        make: [v.oneOfArray(validMakes), notFailingAsyncValidationRule],
+        model: [v.oneOfArray(validModels), notFailingAsyncValidationRule],
         engine: {
-          displacement: [v.isInteger, notFailingAsyncValidationRule],
+          displacement: [v.isInteger, v.oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
           cylinders: [v.isInteger, failingAsyncValidationRule],
         },
       },

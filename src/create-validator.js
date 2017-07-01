@@ -1,6 +1,6 @@
 'use strict';
 
-const validators = require('./validators');
+const rules = require('./rules');
 const util = require('./util');
 
 const containsError = validationResult => {
@@ -10,34 +10,7 @@ const containsError = validationResult => {
   return isErrorString || isErrorObject;
 };
 
-const validator = perAttributeRules => {
-  return data => {
-    const errors = {};
-    Object.keys(perAttributeRules).forEach((key) => {
-      const valueOfKey = perAttributeRules[key];
-      let error;
-      if (util.isObject(valueOfKey)) {
-        const dataToValidate = data[key];
-        if (!dataToValidate) {
-          error = `Required property ${key} is missing`;
-        } else {
-          const validateEnclosedObject = validator(valueOfKey);
-          error = validateEnclosedObject(dataToValidate);
-        }
-      } else {
-        const validateAttribute = validators.allOfRules(valueOfKey);
-        error = validateAttribute(data[key], data);
-      }
-
-      if (containsError(error)) {
-        errors[key] = error;
-      }
-    });
-    return errors;
-  };
-};
-
-const asyncValidator = perAttributeRules => {
+const createValidator = perAttributeRules => {
   return data => {
     const errors = {};
     const promises = [];
@@ -49,11 +22,11 @@ const asyncValidator = perAttributeRules => {
         if (!dataToValidate) {
           validatePromise = Promise.resolve(`Required property ${key} is missing`);
         } else {
-          const validateEnclosedObjectAsync = asyncValidator(valueOfKey);
+          const validateEnclosedObjectAsync = createValidator(valueOfKey);
           validatePromise = validateEnclosedObjectAsync(dataToValidate);
         }
       } else {
-        const validateAttributeAsync = validators.allOfRulesAsync(valueOfKey);
+        const validateAttributeAsync = rules.allOfRules(valueOfKey);
         validatePromise = validateAttributeAsync(data[key], data);
       }
 
@@ -69,4 +42,4 @@ const asyncValidator = perAttributeRules => {
   };
 };
 
-module.exports = { validator, asyncValidator };
+module.exports = createValidator;
