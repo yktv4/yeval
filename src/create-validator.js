@@ -1,11 +1,11 @@
 'use strict';
 
-const rules = require('./rules');
-const util = require('./util');
+const { allOfRules } = require('./rules');
+const { isObject, isEmptyObject } = require('./util');
 
 const containsError = validationResult => {
   const isErrorString = typeof validationResult === 'string';
-  const isErrorObject = util.isObject(validationResult) && !util.isEmptyObject(validationResult);
+  const isErrorObject = isObject(validationResult) && !isEmptyObject(validationResult);
 
   return isErrorString || isErrorObject;
 };
@@ -17,7 +17,7 @@ const createValidator = perAttributeRules => {
     Object.keys(perAttributeRules).forEach(key => {
       const valueOfKey = perAttributeRules[key];
       let validatePromise;
-      if (util.isObject(valueOfKey)) {
+      if (isObject(valueOfKey)) {
         const dataToValidate = data[key];
         if (!dataToValidate) {
           validatePromise = Promise.resolve(`Required property ${key} is missing`);
@@ -26,7 +26,7 @@ const createValidator = perAttributeRules => {
           validatePromise = validateEnclosedObjectAsync(dataToValidate);
         }
       } else {
-        const validateAttributeAsync = rules.allOfRules(valueOfKey);
+        const validateAttributeAsync = allOfRules(valueOfKey);
         validatePromise = validateAttributeAsync(data[key], data);
       }
 

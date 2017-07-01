@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Dead simple javascript validation",
   "main": "index.js",
+  "engines": {
+    "node": "^6.10.0"
+  },
   "scripts": {
     "test": "NODE_ENV=test ./node_modules/mocha/bin/mocha"
   },

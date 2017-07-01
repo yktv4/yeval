@@ -2,8 +2,7 @@
 
 require('should');
 const _ = require('lodash');
-const yeval = require('./../index');
-const v = yeval.rules;
+const { createValidator, rules: { isString, isInteger, oneOfArray, oneOfRules } } = require('./../index');
 
 describe('Validators creation', () => {
   const testValues = {
@@ -29,19 +28,19 @@ describe('Validators creation', () => {
   const validModels = ['3-er', '5-er', '7-er'];
 
   it('should perform validation of an object with enclosed properties', () => {
-    const validateAsync = yeval.create({
-      deal: [v.isString, notFailingAsyncValidationRule],
+    const validateAsync = createValidator({
+      deal: [isString, notFailingAsyncValidationRule],
       car: {
-        make: [v.oneOfArray(validMakes), notFailingAsyncValidationRule],
-        model: [v.oneOfArray(validModels), notFailingAsyncValidationRule],
+        make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
+        model: [oneOfArray(validModels), notFailingAsyncValidationRule],
         engine: {
-          displacement: [v.isInteger, notFailingAsyncValidationRule],
-          cylinders: [v.isInteger, notFailingAsyncValidationRule],
+          displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
+          cylinders: [isInteger, notFailingAsyncValidationRule],
         },
       },
       owner: {
-        name: [v.isString, notFailingAsyncValidationRule],
-        surname: [v.isString, notFailingAsyncValidationRule],
+        name: [isString, notFailingAsyncValidationRule],
+        surname: [isString, notFailingAsyncValidationRule],
       },
     });
 
@@ -52,19 +51,19 @@ describe('Validators creation', () => {
   });
 
   it('should populate errors object correctly when validation fails', () => {
-    const validateAsync = yeval.create({
-      deal: [v.isString, failingAsyncValidationRule],
+    const validateAsync = createValidator({
+      deal: [isString, failingAsyncValidationRule],
       car: {
-        make: [v.oneOfArray(validMakes), notFailingAsyncValidationRule],
-        model: [v.oneOfArray(validModels), notFailingAsyncValidationRule],
+        make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
+        model: [oneOfArray(validModels), notFailingAsyncValidationRule],
         engine: {
-          displacement: [v.isInteger, v.oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
-          cylinders: [v.isInteger, failingAsyncValidationRule],
+          displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
+          cylinders: [isInteger, failingAsyncValidationRule],
         },
       },
       owner: {
-        name: [v.isString, notFailingAsyncValidationRule],
-        surname: [v.isString, notFailingAsyncValidationRule],
+        name: [isString, notFailingAsyncValidationRule],
+        surname: [isString, notFailingAsyncValidationRule],
       },
     });
 
