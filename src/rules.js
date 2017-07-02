@@ -1,16 +1,10 @@
 'use strict';
 
+const _ = require('lodash');
+
 /**
  * helper functions to compose validation rules
  */
-
-const isEmpty = value => value === undefined || value === null || value === '';
-
-const notEmpty = (value) => {
-  return !isEmpty(value);
-};
-
-const isDefined = value => value !== undefined;
 
 const msgFor = (rule, msg) => (value, data) => rule(value, data) ? msg : undefined;
 
@@ -36,7 +30,7 @@ const allOfRules = rules => {
 const when = (predicate, rules) => {
   return (value, data) => {
     return Promise.resolve()
-      .then(() => typeof predicate === 'boolean' ? predicate : predicate(value, data))
+      .then(() => _.isBoolean(predicate) ? predicate : predicate(value, data))
       .then(shouldExecute => {
         if (shouldExecute) {
           return allOfRules(rules)(value, data);
@@ -57,60 +51,53 @@ const oneOfRules = rules => {
   };
 };
 
-
 /**
  * Validators that return errors
  */
 
 const email = (value) => {
   if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]+$/i.test(value)) {
-    return 'Enter valid email address';
+    return 'Must be a valid email address';
   }
 };
 
-const required = (value, data) => {
-  if (isEmpty(value)) {
+const required = (value) => {
+  if (_.isUndefined(value)) {
     return 'Required';
   }
 };
 
-const date = (value, data) => {
+const isDate = (value) => {
   const dateRegexp = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegexp.test(value)) {
-    return 'Please enter a valid date(mm-dd-yyyy)';
-  }
-};
-
-const isAlpha = (value) => {
-  if (!/^[a-zA-Z,\-\.\'\"]*$/.test(value)) {
-    return 'Only letters and ,-.\'" are allowed';
+    return 'Must be a valid date (yyyy-mm-dd)';
   }
 };
 
 const isArray = (value) => {
-  if (!Array.isArray(value)) {
+  if (!_.isArray(value)) {
     return 'Must be an array';
   }
 };
 
-const isObject = (value) => {
-  if (!(typeof value === 'object' && value.toString() === '[object Object]')) {
-    return 'Must be an object';
+const isPlainObject = (value) => {
+  if (!_.isPlainObject(value)) {
+    return 'Must be a plain object';
   }
 };
 
 const minLength = (min) => {
   return value => {
-    if (!isEmpty(value) && value.length < min) {
-      return `Must be at least ${min} characters`;
+    if (!(value !== undefined && value !== null && _.isNumber(value.length) && value.length < min)) {
+      return `Length must be no less than ${min}`;
     }
   };
 };
 
 const maxLength = (max) => {
   return value => {
-    if (!isEmpty(value) && value.length > max) {
-      return `Must be no more than ${max} characters`;
+    if (!(value !== undefined && value !== null && _.isNumber(value.length) && value.length > max)) {
+      return `Length must be no more than ${max}`;
     }
   };
 };
@@ -132,31 +119,31 @@ const maxValue = (max) => {
 };
 
 const isInteger = (value) => {
-  if (!Number.isInteger(Number(value))) {
+  if (!_.isInteger(value)) {
     return 'Must be an integer';
   }
 };
 
 const isFloat = (value) => {
-  if (!(Number(value) === value && value % 1 !== 0)) {
+  if (!(_.isNumber(value) && Number(value) === value && value % 1 !== 0)) {
     return 'Must be a float';
   }
 };
 
 const isNumber = (value) => {
-  if (!(typeof value === 'number' && !isNaN(value))) {
+  if (!_.isNumber(value)) {
     return 'Must be a number';
   }
 };
 
 const isBoolean = (value) => {
-  if (!(typeof value === 'boolean')) {
+  if (!_.isBoolean(value)) {
     return 'Must be boolean';
   }
 };
 
 const isString = (value) => {
-  if (!(typeof value === 'string')) {
+  if (!_.isString(value)) {
     return 'Must be string';
   }
 };
@@ -175,26 +162,22 @@ const equals = toWhat => value => {
   }
 };
 
-const matches = fieldName => (value, data) => {
+const sameAs = fieldName => (value, data) => {
   if (data[fieldName] !== value) {
     return `Must match ${fieldName}`;
   }
 };
 
 module.exports = {
-  isEmpty,
-  notEmpty,
-  isDefined,
   msgFor,
   allOfRules,
   when,
   oneOfRules,
   email,
   required,
-  date,
-  isAlpha,
+  isDate,
   isArray,
-  isObject,
+  isPlainObject,
   minLength,
   maxLength,
   minValue,
@@ -206,5 +189,5 @@ module.exports = {
   isString,
   oneOfArray,
   equals,
-  matches,
+  sameAs,
 };

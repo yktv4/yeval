@@ -1,11 +1,11 @@
 'use strict';
 
 const { allOfRules } = require('./rules');
-const { isObject, isEmptyObject } = require('./util');
+const { isPlainObject, isEmpty, isString } = require('lodash');
 
 const containsError = validationResult => {
-  const isErrorString = typeof validationResult === 'string';
-  const isErrorObject = isObject(validationResult) && !isEmptyObject(validationResult);
+  const isErrorString = isString(validationResult);
+  const isErrorObject = isPlainObject(validationResult) && !isEmpty(validationResult);
 
   return isErrorString || isErrorObject;
 };
@@ -17,7 +17,7 @@ const createValidator = perAttributeRules => {
     Object.keys(perAttributeRules).forEach(key => {
       const valueOfKey = perAttributeRules[key];
       let validatePromise;
-      if (isObject(valueOfKey)) {
+      if (isPlainObject(valueOfKey)) {
         const dataToValidate = data[key];
         if (!dataToValidate) {
           validatePromise = Promise.resolve(`Required property ${key} is missing`);
