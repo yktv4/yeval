@@ -11,12 +11,16 @@ const containsError = validationResult => {
   return isErrorString || isErrorObject;
 };
 
+const returnUndefinedOnSuccess = errors => {
+  return Object.keys(errors).length === 0 ? undefined : errors;
+};
+
 const createValidator = perAttributeRules => {
   return data => {
     const errors = {};
     const executors = map(perAttributeRules, (rulesForKey, keyToValidate) => {
       const dataToValidate = data[keyToValidate];
-      const checkForErrors = validationResult => {
+      const storeErrors = validationResult => {
         if (containsError(validationResult)) {
           errors[keyToValidate] = validationResult;
         }
@@ -27,16 +31,19 @@ const createValidator = perAttributeRules => {
         if (!isPlainObject(dataToValidate)) {
           validateFunction = () => Promise.resolve(`Property ${keyToValidate} must be an object`);
         } else {
-          validateFunction = () => createValidator(rulesForKey)(dataToValidate).then(checkForErrors);
+          validateFunction = () => createValidator(rulesForKey)(dataToValidate).then(storeErrors);
         }
       } else {
-        validateFunction = () => firstError(rulesForKey)(data[keyToValidate], data).then(checkForErrors);
+        validateFunction = () => firstError(rulesForKey)(data[keyToValidate], data).then(storeErrors);
       }
 
       return validateFunction;
     });
 
-    return Promise.mapSeries(executors, executor => executor()).then(() => errors);
+    return Promise
+      .mapSeries(executors, executor => executor())
+      .then(() => errors)
+      .then(returnUndefinedOnSuccess);
   };
 };
 

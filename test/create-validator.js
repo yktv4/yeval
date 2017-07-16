@@ -1,6 +1,6 @@
 'use strict';
 
-require('should');
+const should = require('should');
 const Promise = require('bluebird');
 const _ = require('lodash');
 const { createValidator, rules: { isString, isInteger, oneOfArray, oneOfRules } } = require('./../index');
@@ -47,7 +47,7 @@ describe('Validators creation', () => {
 
     return validateAsync(testValues)
       .then(errors => {
-        Object.keys(errors).should.have.lengthOf(0);
+        should(errors).be.undefined();
       });
   });
 
@@ -74,6 +74,7 @@ describe('Validators creation', () => {
 
     return validateAsync(thisCaseTestValues)
       .then(errors => {
+        errors.should.be.an.Object();
         Object.keys(errors).should.have.lengthOf(2);
 
         errors.car.engine.cylinders.should.be.a.String();
@@ -98,7 +99,7 @@ describe('Validators creation', () => {
 
     return createValidator({ someName: [firstRule, secondRule] })({ someName: 'someValue' })
       .then(errors => {
-        Object.keys(errors).should.have.lengthOf(0);
+        should(errors).be.undefined();
         secondRuleWasExecutedAfterFirst.should.be.true();
       });
   });
@@ -114,6 +115,7 @@ describe('Validators creation', () => {
 
     return createValidator({ someName: [firstRule, secondRule] })({ someName: 'someValue' })
       .then(errors => {
+        errors.should.be.an.Object();
         errors.should.have.property('someName');
         secondRuleWasExecuted.should.be.false();
       });
