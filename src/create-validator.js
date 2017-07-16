@@ -1,15 +1,8 @@
 'use strict';
 
-const { isPlainObject, isEmpty, isString, map } = require('lodash');
+const { isPlainObject, map } = require('lodash');
 const Promise = require('bluebird');
-const { firstError } = require('./util');
-
-const containsError = validationResult => {
-  const isErrorString = isString(validationResult);
-  const isErrorObject = isPlainObject(validationResult) && !isEmpty(validationResult);
-
-  return isErrorString || isErrorObject;
-};
+const { firstError, containsError } = require('./util');
 
 const returnUndefinedOnSuccess = errors => {
   return Object.keys(errors).length === 0 ? undefined : errors;

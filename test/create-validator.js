@@ -5,7 +5,7 @@ const Promise = require('bluebird');
 const _ = require('lodash');
 const {
   createValidator,
-  util: { oneOfRules, when },
+  util: { oneOfRules, when, msgFor },
   rules: { isString, isInteger, oneOfArray }
 } = require('./../index');
 
@@ -165,7 +165,7 @@ describe('Validators creation', () => {
         return Promise.resolve(errorDescription);
       };
       const validateAsync = createValidator({
-        deal: [isString],
+        deal: isString,
         car: when(true, {
           make: [oneOfArray(validMakes), validateCar],
           model: [oneOfArray(validModels), validateCar],
@@ -196,5 +196,27 @@ describe('Validators creation', () => {
           validationOfCarWasPerformed.should.be.true();
         });
     })
+  });
+
+  describe('usage of msgFor helper', () => {
+    const customErrorMessage = 'Custom error message';
+
+    it('should allow for async rules', () => {
+      return createValidator({ make: msgFor(failingAsyncValidationRule, customErrorMessage) })({ make: 'some value' })
+        .then(errors => {
+          should(errors).be.an.Object();
+          errors.make.should.be.a.String();
+          errors.make.should.eql(customErrorMessage);
+        });
+    });
+
+    it('should allow for enclosed objects', () => {
+      return createValidator({ car: msgFor({ make: failingAsyncValidationRule }, customErrorMessage) })({ car: {} })
+        .then(errors => {
+          should(errors).be.an.Object();
+          errors.car.should.be.a.String();
+          errors.car.should.eql(customErrorMessage);
+        });
+    });
   });
 });

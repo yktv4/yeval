@@ -2,7 +2,25 @@
 
 const { isPlainObject, isFunction, castArray } = require('lodash');
 
-const msgFor = (rule, msg) => (value, data) => rule(value, data) ? msg : undefined;
+const executeAsync = func => Promise.resolve().then(func);
+
+const msgFor = (rules, msg) => (value, data) => {
+  const returnMessageOnError = validationResult => {
+    if (containsError(validationResult)) {
+      return msg;
+    }
+  };
+
+  let validatePromise;
+  if (isPlainObject(rules)) {
+    const createValidator = require('./create-validator');
+    validatePromise = createValidator(rules)(value);
+  } else {
+    validatePromise = firstError(castArray(rules))(value, data);
+  }
+
+  return validatePromise.then(returnMessageOnError);
+};
 
 const allErrors = rules => {
   const rulesToApply = castArray(rules);
@@ -10,8 +28,7 @@ const allErrors = rules => {
     // launch validation rules in series
     return rulesToApply.reduce(
       (acc, rule) => {
-        return acc.then(result => Promise.resolve().then(() => rule(value, data))
-          .then(Array.prototype.concat.bind(result)));
+        return acc.then(result => executeAsync(() => rule(value, data)).then(Array.prototype.concat.bind(result)));
       },
       Promise.resolve([])
     );
@@ -29,7 +46,7 @@ const firstError = rules => {
             // if an error was returned by previous rule then don't execute any rules further
             return acc;
           } else {
-            return acc.then(() => Promise.resolve().then(() => rule(value, data)));
+            return acc.then(() => executeAsync(() => rule(value, data)));
           }
         });
       },
@@ -67,10 +84,13 @@ const oneOfRules = rules => {
   };
 };
 
+const containsError = validationResult => validationResult !== undefined;
+
 module.exports = {
   oneOfRules,
   when,
   firstError,
   allErrors,
   msgFor,
+  containsError,
 };
