@@ -14,13 +14,6 @@ const required = (value) => {
   }
 };
 
-const isDate = (value) => {
-  const dateRegexp = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegexp.test(value)) {
-    return 'Must be a valid date (yyyy-mm-dd)';
-  }
-};
-
 const isArray = (value) => {
   if (!_.isArray(value)) {
     return 'Must be an array';
@@ -118,7 +111,6 @@ const sameAs = fieldName => (value, data) => {
 module.exports = {
   email,
   required,
-  isDate,
   isArray,
   isPlainObject,
   minLength,
