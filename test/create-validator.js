@@ -125,7 +125,7 @@ describe('Validators creation', () => {
       });
   });
 
-  describe('usage of when helper for enclosed objects', () => {
+  describe('usage of when helper', () => {
     it('should not execute enclosed object rules if predicate is false', () => {
       let validationOfCarWasPerformed = false;
 
@@ -195,7 +195,14 @@ describe('Validators creation', () => {
           });
           validationOfCarWasPerformed.should.be.true();
         });
-    })
+    });
+
+    it('should not execute any rules if promise is supplied that resolves with falsy value', () => {
+      return createValidator({ make: when(Promise.resolve(false), isString) })({ make: 123 })
+        .then(errors => {
+          should(errors).be.undefined();
+        });
+    });
   });
 
   describe('usage of msgFor helper', () => {

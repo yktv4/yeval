@@ -58,9 +58,9 @@ const firstError = rules => {
 const when = (predicate, rules) => {
   return (value, data) => {
     return Promise.resolve()
-      .then(() => isFunction(predicate) ? predicate(value, data) : Boolean(predicate))
+      .then(() => isFunction(predicate) ? predicate(value, data) : predicate)
       .then(shouldExecute => {
-        if (shouldExecute) {
+        if (Boolean(shouldExecute)) {
           if (isPlainObject(rules)) {
             const createValidator = require('./create-validator');
             return createValidator(rules)(value);
