@@ -11,6 +11,7 @@ const msgFor = (rule, msg) => (value, data) => rule(value, data) ? msg : undefin
 const allErrors = rules => {
   const rulesToApply = _.castArray(rules);
   return (value, data) => {
+    // launch validation rules in series
     return rulesToApply.reduce(
       (acc, rule) => {
         return acc.then(result => Promise.resolve().then(() => rule(value, data))
@@ -24,9 +25,20 @@ const allErrors = rules => {
 const firstError = rules => {
   const rulesToApply = _.castArray(rules);
   return (value, data) => {
-    return allErrors(rulesToApply)(value, data)
-      .then(errors => errors.filter(err => !!err))
-      .then(errors => errors[0]);
+    // launch validation rules in series
+    return rulesToApply.reduce(
+      (acc, rule) => {
+        return acc.then(error => {
+          if (error !== undefined) {
+            // if an error was returned by previous rule then don't execute any rules further
+            return acc;
+          } else {
+            return acc.then(() => Promise.resolve().then(() => rule(value, data)));
+          }
+        });
+      },
+      Promise.resolve()
+    );
   };
 };
 

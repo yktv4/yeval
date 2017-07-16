@@ -85,21 +85,37 @@ describe('Validators creation', () => {
     let firstRuleWasExecuted = false;
     let secondRuleWasExecutedAfterFirst = false;
 
-    const delayedFailingRule = () => Promise.delay(100).then(() => {
+    const firstRule = () => Promise.delay(100).then(() => {
       firstRuleWasExecuted = true;
-      return Promise.resolve('Some error description');
+      return Promise.resolve();
     });
-    const notFailingRule = () => Promise.resolve().then(() => {
+    const secondRule = () => Promise.resolve().then(() => {
       if (firstRuleWasExecuted) {
         secondRuleWasExecutedAfterFirst = true;
       }
       return Promise.resolve();
     });
 
-    return createValidator({ someName: [delayedFailingRule, notFailingRule] })({ someName: 'someValue' })
+    return createValidator({ someName: [firstRule, secondRule] })({ someName: 'someValue' })
+      .then(errors => {
+        Object.keys(errors).should.have.lengthOf(0);
+        secondRuleWasExecutedAfterFirst.should.be.true();
+      });
+  });
+
+  it('should stop execution of rules on first error by default', () => {
+    let secondRuleWasExecuted = false;
+
+    const firstRule = () => Promise.resolve('Some error description');
+    const secondRule = () => {
+      secondRuleWasExecuted = true;
+      return Promise.resolve();
+    };
+
+    return createValidator({ someName: [firstRule, secondRule] })({ someName: 'someValue' })
       .then(errors => {
         errors.should.have.property('someName');
-        secondRuleWasExecutedAfterFirst.should.be.true();
+        secondRuleWasExecuted.should.be.false();
       });
   });
 });
