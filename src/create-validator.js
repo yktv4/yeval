@@ -1,7 +1,8 @@
 'use strict';
 
-const { allOfRules } = require('./rules');
-const { isPlainObject, isEmpty, isString } = require('lodash');
+const { isPlainObject, isEmpty, isString, map } = require('lodash');
+const Promise = require('bluebird');
+const { firstError } = require('./rules');
 
 const containsError = validationResult => {
   const isErrorString = isString(validationResult);
@@ -13,32 +14,29 @@ const containsError = validationResult => {
 const createValidator = perAttributeRules => {
   return data => {
     const errors = {};
-    const promises = [];
-    Object.keys(perAttributeRules).forEach(key => {
-      const valueOfKey = perAttributeRules[key];
-      let validatePromise;
-      if (isPlainObject(valueOfKey)) {
-        const dataToValidate = data[key];
-        if (!dataToValidate) {
-          validatePromise = Promise.resolve(`Required property ${key} is missing`);
+    const executors = map(perAttributeRules, (rulesForKey, keyToValidate) => {
+      const dataToValidate = data[keyToValidate];
+      const checkForErrors = validationResult => {
+        if (containsError(validationResult)) {
+          errors[keyToValidate] = validationResult;
+        }
+      };
+      let validateFunction;
+
+      if (isPlainObject(rulesForKey)) {
+        if (!isPlainObject(dataToValidate)) {
+          validateFunction = () => Promise.resolve(`Property ${keyToValidate} must be an object`);
         } else {
-          const validateEnclosedObjectAsync = createValidator(valueOfKey);
-          validatePromise = validateEnclosedObjectAsync(dataToValidate);
+          validateFunction = () => createValidator(rulesForKey)(dataToValidate).then(checkForErrors);
         }
       } else {
-        const validateAttributeAsync = allOfRules(valueOfKey);
-        validatePromise = validateAttributeAsync(data[key], data);
+        validateFunction = () => firstError(rulesForKey)(data[keyToValidate], data).then(checkForErrors);
       }
 
-      validatePromise
-        .then(error => {
-          if (containsError(error)) {
-            errors[key] = error;
-          }
-        });
-      promises.push(validatePromise);
+      return validateFunction;
     });
-    return Promise.all(promises).then(() => errors);
+
+    return Promise.mapSeries(executors, executor => executor()).then(() => errors);
   };
 };
 

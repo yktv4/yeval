@@ -26,6 +26,7 @@
     "lodash": "^4.17.4"
   },
   "devDependencies": {
+    "bluebird": "^3.5.0",
     "mocha": "^3.2.0",
     "should": "^11.2.0"
   },

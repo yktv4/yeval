@@ -8,20 +8,23 @@ const _ = require('lodash');
 
 const msgFor = (rule, msg) => (value, data) => rule(value, data) ? msg : undefined;
 
-const allErrorsOfRules = rules => {
-  const rulesToApply = rules instanceof Array ? rules : [rules];
+const allErrors = rules => {
+  const rulesToApply = _.castArray(rules);
   return (value, data) => {
-    const promises = rulesToApply.map(rule => {
-      return Promise.resolve().then(() => rule(value, data));
-    });
-    return Promise.all(promises);
+    return rulesToApply.reduce(
+      (acc, rule) => {
+        return acc.then(result => Promise.resolve().then(() => rule(value, data))
+          .then(Array.prototype.concat.bind(result)));
+      },
+      Promise.resolve([])
+    );
   };
 };
 
-const allOfRules = rules => {
-  const rulesToApply = rules instanceof Array ? rules : [rules];
+const firstError = rules => {
+  const rulesToApply = _.castArray(rules);
   return (value, data) => {
-    return allErrorsOfRules(rulesToApply)(value, data)
+    return allErrors(rulesToApply)(value, data)
       .then(errors => errors.filter(err => !!err))
       .then(errors => errors[0]);
   };
@@ -33,16 +36,16 @@ const when = (predicate, rules) => {
       .then(() => _.isBoolean(predicate) ? predicate : predicate(value, data))
       .then(shouldExecute => {
         if (shouldExecute) {
-          return allOfRules(rules)(value, data);
+          return firstError(rules)(value, data);
         }
       });
   };
 };
 
 const oneOfRules = rules => {
-  const rulesToApply = rules instanceof Array ? rules : [rules];
+  const rulesToApply = _.castArray(rules);
   return (value, data) => {
-    return allErrorsOfRules(rulesToApply)(value, data)
+    return allErrors(rulesToApply)(value, data)
       .then(errors => {
         if (errors.filter(err => !err).length === 0) {
           return errors.filter(err => !!err)[0];
@@ -170,7 +173,7 @@ const sameAs = fieldName => (value, data) => {
 
 module.exports = {
   msgFor,
-  allOfRules,
+  firstError,
   when,
   oneOfRules,
   email,

@@ -1,6 +1,7 @@
 'use strict';
 
 require('should');
+const Promise = require('bluebird');
 const _ = require('lodash');
 const { createValidator, rules: { isString, isInteger, oneOfArray, oneOfRules } } = require('./../index');
 
@@ -77,6 +78,28 @@ describe('Validators creation', () => {
 
         errors.car.engine.cylinders.should.be.a.String();
         errors.deal.should.be.a.String();
+      });
+  });
+
+  it('should perform a validation of an attribute in series by default', () => {
+    let firstRuleWasExecuted = false;
+    let secondRuleWasExecutedAfterFirst = false;
+
+    const delayedFailingRule = () => Promise.delay(100).then(() => {
+      firstRuleWasExecuted = true;
+      return Promise.resolve('Some error description');
+    });
+    const notFailingRule = () => Promise.resolve().then(() => {
+      if (firstRuleWasExecuted) {
+        secondRuleWasExecutedAfterFirst = true;
+      }
+      return Promise.resolve();
+    });
+
+    return createValidator({ someName: [delayedFailingRule, notFailingRule] })({ someName: 'someValue' })
+      .then(errors => {
+        errors.should.have.property('someName');
+        secondRuleWasExecutedAfterFirst.should.be.true();
       });
   });
 });
