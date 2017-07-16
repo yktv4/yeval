@@ -2,7 +2,7 @@
 
 const { isPlainObject, isEmpty, isString, map } = require('lodash');
 const Promise = require('bluebird');
-const { firstError } = require('./rules');
+const { firstError } = require('./util');
 
 const containsError = validationResult => {
   const isErrorString = isString(validationResult);

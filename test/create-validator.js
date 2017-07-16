@@ -3,7 +3,11 @@
 const should = require('should');
 const Promise = require('bluebird');
 const _ = require('lodash');
-const { createValidator, rules: { isString, isInteger, oneOfArray, oneOfRules } } = require('./../index');
+const {
+  createValidator,
+  util: { oneOfRules, when },
+  rules: { isString, isInteger, oneOfArray }
+} = require('./../index');
 
 describe('Validators creation', () => {
   const testValues = {
@@ -74,7 +78,7 @@ describe('Validators creation', () => {
 
     return validateAsync(thisCaseTestValues)
       .then(errors => {
-        errors.should.be.an.Object();
+        should(errors).be.an.Object();
         Object.keys(errors).should.have.lengthOf(2);
 
         errors.car.engine.cylinders.should.be.a.String();
@@ -115,9 +119,82 @@ describe('Validators creation', () => {
 
     return createValidator({ someName: [firstRule, secondRule] })({ someName: 'someValue' })
       .then(errors => {
-        errors.should.be.an.Object();
+        should(errors).be.an.Object();
         errors.should.have.property('someName');
         secondRuleWasExecuted.should.be.false();
       });
+  });
+
+  describe('usage of when helper for enclosed objects', () => {
+    it('should not execute enclosed object rules if predicate is false', () => {
+      let validationOfCarWasPerformed = false;
+
+      const validateCar = () => {
+        validationOfCarWasPerformed = true;
+        return Promise.resolve('Some error description');
+      };
+      const validateAsync = createValidator({
+        deal: [isString],
+        car: when(false, {
+          make: [oneOfArray(validMakes), validateCar],
+          model: [oneOfArray(validModels), validateCar],
+          engine: {
+            displacement: [isInteger, validateCar],
+            cylinders: [isInteger, validateCar],
+          },
+        }),
+        owner: {
+          name: [isString, notFailingAsyncValidationRule],
+          surname: [isString, notFailingAsyncValidationRule],
+        },
+      });
+
+      return validateAsync(testValues)
+        .then(errors => {
+          should(errors).be.undefined();
+          validationOfCarWasPerformed.should.be.false();
+        });
+    });
+
+    it('should execute enclosed object rules if predicate is true', () => {
+      const errorDescription = 'Some error description';
+      let validationOfCarWasPerformed = false;
+
+      const validateCar = () => {
+        validationOfCarWasPerformed = true;
+        return Promise.resolve(errorDescription);
+      };
+      const validateAsync = createValidator({
+        deal: [isString],
+        car: when(true, {
+          make: [oneOfArray(validMakes), validateCar],
+          model: [oneOfArray(validModels), validateCar],
+          engine: {
+            displacement: [isInteger, validateCar],
+            cylinders: [isInteger, validateCar],
+          },
+        }),
+        owner: {
+          name: [isString, notFailingAsyncValidationRule],
+          surname: [isString, notFailingAsyncValidationRule],
+        },
+      });
+
+      return validateAsync(testValues)
+        .then(errors => {
+          should(errors).be.Object();
+          errors.should.containEql({
+            car: {
+              make: errorDescription,
+              model: errorDescription,
+              engine: {
+                displacement: errorDescription,
+                cylinders: errorDescription,
+              },
+            },
+          });
+          validationOfCarWasPerformed.should.be.true();
+        });
+    })
   });
 });
