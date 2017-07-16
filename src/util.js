@@ -14,7 +14,7 @@ const msgFor = (rules, msg) => (value, data) => {
   let validatePromise;
   if (isPlainObject(rules)) {
     const createValidator = require('./create-validator');
-    validatePromise = createValidator(rules)(value);
+    validatePromise = createValidator(rules, data)(value);
   } else {
     validatePromise = firstError(castArray(rules))(value, data);
   }
@@ -55,21 +55,19 @@ const firstError = rules => {
   };
 };
 
-const when = (predicate, rules) => {
-  return (value, data) => {
-    return Promise.resolve()
-      .then(() => isFunction(predicate) ? predicate(value, data) : predicate)
-      .then(shouldExecute => {
-        if (Boolean(shouldExecute)) {
-          if (isPlainObject(rules)) {
-            const createValidator = require('./create-validator');
-            return createValidator(rules)(value);
-          } else {
-            return firstError(rules)(value, data);
-          }
+const when = (predicate, rules) => (value, data) => {
+  return Promise.resolve()
+    .then(() => isFunction(predicate) ? predicate(value, data) : predicate)
+    .then(shouldExecute => {
+      if (Boolean(shouldExecute)) {
+        if (isPlainObject(rules)) {
+          const createValidator = require('./create-validator');
+          return createValidator(rules, data)(value);
+        } else {
+          return firstError(rules)(value, data);
         }
-      });
-  };
+      }
+    });
 };
 
 const oneOfRules = rules => {

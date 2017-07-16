@@ -32,27 +32,54 @@ describe('Validators creation', () => {
   const validMakes = ['BMW', 'Mercedes', 'Audi'];
   const validModels = ['3-er', '5-er', '7-er'];
 
-  it('should perform validation of an object with enclosed properties', () => {
-    const validateAsync = createValidator({
-      deal: [isString, notFailingAsyncValidationRule],
-      car: {
-        make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
-        model: [oneOfArray(validModels), notFailingAsyncValidationRule],
-        engine: {
-          displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
-          cylinders: [isInteger, notFailingAsyncValidationRule],
+  describe('handling of objects with enclosed properties', () => {
+    it('should perform validation', () => {
+      const validateAsync = createValidator({
+        deal: [isString, notFailingAsyncValidationRule],
+        car: {
+          make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
+          model: [oneOfArray(validModels), notFailingAsyncValidationRule],
+          engine: {
+            displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
+            cylinders: [isInteger, notFailingAsyncValidationRule],
+          },
         },
-      },
-      owner: {
-        name: [isString, notFailingAsyncValidationRule],
-        surname: [isString, notFailingAsyncValidationRule],
-      },
+        owner: {
+          name: [isString, notFailingAsyncValidationRule],
+          surname: [isString, notFailingAsyncValidationRule],
+        },
+      });
+
+      return validateAsync(testValues)
+        .then(errors => {
+          should(errors).be.undefined();
+        });
     });
 
-    return validateAsync(testValues)
-      .then(errors => {
-        should(errors).be.undefined();
+    it('should pass the whole form data as second argument', () => {
+      let dealPropertyWasAvailable = true;
+      const validateEnclosedObject = (value, data) => {
+        if (data.deal !== testValues.deal) {
+          dealPropertyWasAvailable = false;
+        }
+      };
+
+      const validateAsync = createValidator({
+        deal: isString,
+        car: {
+          make: [oneOfArray(validMakes), validateEnclosedObject],
+          engine: {
+            cylinders: validateEnclosedObject,
+          },
+        },
       });
+
+      return validateAsync(testValues)
+        .then(errors => {
+          should(errors).be.undefined();
+          dealPropertyWasAvailable.should.be.true('"deal" property was not available');
+        });
+    });
   });
 
   it('should populate errors object correctly when validation fails', () => {
@@ -203,6 +230,32 @@ describe('Validators creation', () => {
           should(errors).be.undefined();
         });
     });
+
+    it('should pass whole data if `when` is applied within an enclosed object', () => {
+      let dealPropertyWasAvailable = true;
+      const returnsTrue = (value, data) => {
+        if (data.deal !== testValues.deal) {
+          dealPropertyWasAvailable = false;
+        }
+        return true;
+      };
+
+      const validateAsync = createValidator({
+        deal: isString,
+        car: when(returnsTrue, {
+          make: when(returnsTrue, oneOfArray(validMakes)),
+          engine: {
+            cylinders: when(returnsTrue, isInteger),
+          },
+        }),
+      });
+
+      return validateAsync(testValues)
+        .then(errors => {
+          should(errors).be.undefined();
+          dealPropertyWasAvailable.should.be.true('"deal" property was not available');
+        });
+    });
   });
 
   describe('usage of msgFor helper', () => {
@@ -225,5 +278,32 @@ describe('Validators creation', () => {
           errors.car.should.eql(customErrorMessage);
         });
     });
+
+    it('should pass whole data if `msgFor` is applied within an enclosed object', () => {
+      const customErrorMessage = 'Custom error message';
+      let dealPropertyWasAvailable = true;
+      const notFailingRule = (value, data) => {
+        if (data.deal !== testValues.deal) {
+          dealPropertyWasAvailable = false;
+        }
+      };
+
+      const validateAsync = createValidator({
+        deal: isString,
+        car: msgFor({
+          make: msgFor(notFailingRule, customErrorMessage),
+          engine: {
+            cylinders: msgFor(notFailingRule, customErrorMessage),
+          },
+        }, customErrorMessage),
+      });
+
+      return validateAsync(testValues)
+        .then(errors => {
+          should(errors).be.undefined();
+          dealPropertyWasAvailable.should.be.true('"deal" property was not available');
+        });
+    });
+
   });
 });
