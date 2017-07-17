@@ -2,7 +2,7 @@
 
 const _ = require('lodash');
 
-const email = (value) => {
+const isEmail = (value) => {
   if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]+$/i.test(value)) {
     return 'Must be a valid email address';
   }
@@ -109,7 +109,7 @@ const sameAs = fieldName => (value, data) => {
 };
 
 module.exports = {
-  email,
+  isEmail,
   required,
   isArray,
   isPlainObject,
