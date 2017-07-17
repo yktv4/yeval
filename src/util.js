@@ -84,6 +84,8 @@ const oneOfRules = rules => {
 
 const containsError = validationResult => validationResult !== undefined;
 
+const isDefined = value => value !== undefined;
+
 module.exports = {
   oneOfRules,
   when,
@@ -91,4 +93,5 @@ module.exports = {
   allErrors,
   msgFor,
   containsError,
+  isDefined,
 };
