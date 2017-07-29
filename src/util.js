@@ -75,6 +75,7 @@ const oneOfRules = rules => {
   return (value, data) => {
     return allErrors(rulesToApply)(value, data)
       .then(errors => {
+        // if all rules have failed return the first error
         if (errors.filter(err => !err).length === 0) {
           return errors.filter(err => !!err)[0];
         }
@@ -90,7 +91,6 @@ module.exports = {
   oneOfRules,
   when,
   firstError,
-  allErrors,
   msgFor,
   containsError,
   isDefined,
