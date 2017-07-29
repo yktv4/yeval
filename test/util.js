@@ -5,7 +5,7 @@ const Promise = require('bluebird');
 const _ = require('lodash');
 const {
   createValidator,
-  util: { oneOfRules, when, msgFor },
+  util: { oneOfRules, when, msgFor, isDefined },
   rules: { isString, isInteger, oneOfArray }
 } = require('./../index');
 
@@ -228,6 +228,41 @@ describe('Util functions', () => {
       return validate(testValues)
         .then(errors => {
           should(errors).be.an.undefined();
+        });
+    });
+  });
+
+  describe('usage of isDefined util', () => {
+    it('should execute the rule if attribute is not undefined', () => {
+      let ruleWasExecuted = false;
+      const optionalRule = () => {
+        ruleWasExecuted = true;
+      };
+      const validate = createValidator({
+        email: when(isDefined, optionalRule),
+      });
+
+      return validate({ email: 123 })
+        .then(() => {
+          ruleWasExecuted.should.be.true();
+        });
+    });
+
+    it('should not execute the rule if attribute is undefined', () => {
+      let ruleWasExecuted = false;
+      const optionalRule = () => {
+        ruleWasExecuted = true;
+      };
+      const validate = createValidator({
+        email: when(isDefined, optionalRule),
+      });
+
+      Promise.all([
+        validate({ email: undefined }),
+        validate({}),
+      ])
+        .then(() => {
+          ruleWasExecuted.should.be.false();
         });
     });
   });
