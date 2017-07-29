@@ -17,7 +17,7 @@ it('should require a value', () => {
 });
 
 it('should validate arrays', () => {
-  validateRule(rules.isArray, [[]], [undefined, null, '', 1, 1.1, {}, true, false, Function]);
+  validateRule(rules.isArray, [[]], [undefined, null, '', 1, 1.1, {}, true, false, Function, Array]);
 });
 
 it('should validate plain objects', () => {
@@ -25,11 +25,11 @@ it('should validate plain objects', () => {
 });
 
 it('should validate min length', () => {
-  validateRule(rules.minLength(3), [[1, 2, 3], 'asd'], [[1, 2], 'as', '']);
+  validateRule(rules.minLength(3), [[1, 2, 3], [1, 2, 3, 4], 'asd', 'asdf'], [[1, 2], 'as', '']);
 });
 
 it('should validate max length', () => {
-  validateRule(rules.maxLength(3), [[1, 2, 3], 'asd', ''], [[1, 2, 3, 4], 'asdf']);
+  validateRule(rules.maxLength(3), [[1, 2, 3], [1], 'asd', ''], [[1, 2, 3, 4], 'asdf']);
 });
 
 it('should validate min value', () => {
@@ -44,7 +44,7 @@ it('should validate if value is an integer', () => {
   validateRule(
     rules.isInteger,
     [-100, -10, -1, 0, 1, 10, 100],
-    [undefined, null, '', 1.1, [], true, false, Object, Infinity, Function]
+    [undefined, null, '', 1.1, [], true, false, Object, Infinity, Function, Number]
   );
 });
 
@@ -69,7 +69,7 @@ it('should validate if value is boolean', () => {
 });
 
 it('should validate if value is a string', () => {
-  validateRule(rules.isString, ['', 'asdasdasd'], [undefined, null, 1, 1.01, true, false, [], Function]);
+  validateRule(rules.isString, ['', 'asdasdasd'], [undefined, null, 1, 1.01, true, false, [], Function, String]);
 });
 
 it('should validate if value is present in array', () => {

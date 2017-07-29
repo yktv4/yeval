@@ -214,7 +214,7 @@ validate({
 });
 ```
 
-### API
-You can see the list of available rules [here](https://github.com/yktv4/yeval/blob/v0.2.0/src/rules.js).
+### Docs
+Docs are available [here](https://github.com/yktv4/yeval/blob/master/docs).
 
 ### License ([MIT](https://github.com/yktv4/yeval/blob/master/LICENSE))
