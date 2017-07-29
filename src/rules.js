@@ -28,7 +28,7 @@ const isPlainObject = (value) => {
 
 const minLength = (min) => {
   return value => {
-    if (!(_.isNumber(value.length) && value.length > min)) {
+    if (!(_.isNumber(value.length) && value.length >= min)) {
       return `Length must be no less than ${min}`;
     }
   };
@@ -36,7 +36,7 @@ const minLength = (min) => {
 
 const maxLength = (max) => {
   return value => {
-    if (!(_.isNumber(value.length) && value.length < max)) {
+    if (!(_.isNumber(value.length) && value.length <= max)) {
       return `Length must be no more than ${max}`;
     }
   };
@@ -65,7 +65,7 @@ const isInteger = (value) => {
 };
 
 const isFloat = (value) => {
-  if (!(_.isNumber(value) && Number(value) === value && value % 1 !== 0)) {
+  if (!(_.isNumber(value) && Number(value) === value && isFinite(value) && value % 1 !== 0)) {
     return 'Must be a float';
   }
 };
@@ -97,13 +97,13 @@ const oneOfArray = (enumeration) => {
 };
 
 const equals = toWhat => value => {
-  if (value !== toWhat) {
+  if (!_.isEqual(value, toWhat)) {
     return `Must match ${toWhat}`;
   }
 };
 
 const sameAs = fieldName => (value, data) => {
-  if (data[fieldName] !== value) {
+  if (!_.isEqual(value, data[fieldName])) {
     return `Must match ${fieldName}`;
   }
 };
