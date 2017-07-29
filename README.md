@@ -65,7 +65,7 @@ assumes value is a string. Proper validation for this case is `[isString, isEmai
 Use `when` to build conditions whether to apply any validation rules.
 
 ```javascript
-const { createValidator, util: { when }, rules: { isBoolean, isEmail, sameAs } } = require('yeval');
+const { createValidator, util: { when }, rules: { isBoolean, isEmail } } = require('yeval');
 
 const optedInForNewsletter = (value, data) => data.optedInForNewsletter === true;
 
@@ -85,10 +85,10 @@ validate({ optedInForNewsletter: true }).then(errors => {
 Writing your own validation rules in the simplest way possible. Just define a function.
 
 ```javascript
-const { createValidator, util: { when }, rules: { isBoolean, isEmail, sameAs } } = require('yeval');
+const { createValidator, rules: { isEmail } } = require('yeval');
 
 const isGmailAccount = (value) => {
-  if (value.slice(-9) !=== 'gmail.com') {
+  if (value.slice(-9) !== 'gmail.com') {
     return 'Sorry, we only accept gmail accounts';
   }
 };
