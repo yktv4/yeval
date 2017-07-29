@@ -1,7 +1,6 @@
 'use strict';
 
 const { isPlainObject, isEmpty, map } = require('lodash');
-const Promise = require('bluebird');
 const { firstError, containsError } = require('./util');
 
 const returnUndefinedOnSuccess = errors => {
@@ -20,7 +19,7 @@ const createValidator = (perAttributeRules, wholeData = {}) => {
     wholeData = isEmpty(wholeData) ? currentData : wholeData;
     const errors = {};
     // create an array of functions that will validate each attribute
-    const executors = map(perAttributeRules, (rulesForKey, keyToValidate) => {
+    const validators = map(perAttributeRules, (rulesForKey, keyToValidate) => {
       const dataToValidate = currentData[keyToValidate];
       const storeErrors = validationResult => {
         if (containsError(validationResult)) {
@@ -43,8 +42,7 @@ const createValidator = (perAttributeRules, wholeData = {}) => {
     });
 
     // execute functions from array one by one
-    return Promise
-      .mapSeries(executors, executor => executor())
+    return validators.reduce((acc, validate) => acc.then(validate), Promise.resolve())
       .then(() => errors)
       .then(returnUndefinedOnSuccess);
   };
