@@ -35,7 +35,7 @@ const createValidator = (perAttributeRules, wholeData = {}) => {
           validateFunction = () => createValidator(rulesForKey, wholeData)(dataToValidate).then(storeErrors);
         }
       } else {
-        validateFunction = () => firstError(rulesForKey)(currentData[keyToValidate], wholeData).then(storeErrors);
+        validateFunction = () => firstError(rulesForKey)(dataToValidate, wholeData).then(storeErrors);
       }
 
       return validateFunction;

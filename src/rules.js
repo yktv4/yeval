@@ -28,7 +28,7 @@ const isPlainObject = (value) => {
 
 const minLength = (min) => {
   return value => {
-    if (!(value !== undefined && value !== null && _.isNumber(value.length) && value.length < min)) {
+    if (!(_.isNumber(value.length) && value.length > min)) {
       return `Length must be no less than ${min}`;
     }
   };
@@ -36,7 +36,7 @@ const minLength = (min) => {
 
 const maxLength = (max) => {
   return value => {
-    if (!(value !== undefined && value !== null && _.isNumber(value.length) && value.length > max)) {
+    if (!(_.isNumber(value.length) && value.length < max)) {
       return `Length must be no more than ${max}`;
     }
   };
