@@ -1,72 +1,51 @@
 'use strict';
 
-const validators = require('./validators');
-const util = require('./util');
+const { isPlainObject, isEmpty, map } = require('lodash');
+const { firstError, containsError } = require('./util');
 
-const containsError = validationResult => {
-  const isErrorString = typeof validationResult === 'string';
-  const isErrorObject = util.isObject(validationResult) && !util.isEmptyObject(validationResult);
-
-  return isErrorString || isErrorObject;
+const returnUndefinedOnSuccess = errors => {
+  return Object.keys(errors).length === 0 ? undefined : errors;
 };
 
-const validator = perAttributeRules => {
-  return data => {
+/**
+ *
+ * @param perAttributeRules {Object} plain object describing rules for each attribute
+ * @param wholeData {Object} data to be passed to validation rules as second attribute. this param is used internally,
+ * you shouldn't have a need to use it.
+ * @return {function(*=)}
+ */
+const createValidator = (perAttributeRules, wholeData = {}) => {
+  return currentData => {
+    wholeData = isEmpty(wholeData) ? currentData : wholeData;
     const errors = {};
-    Object.keys(perAttributeRules).forEach((key) => {
-      const valueOfKey = perAttributeRules[key];
-      let error;
-      if (util.isObject(valueOfKey)) {
-        const dataToValidate = data[key];
-        if (!dataToValidate) {
-          error = `Required property ${key} is missing`;
+    // create an array of functions that will validate each attribute
+    const validators = map(perAttributeRules, (rulesForKey, keyToValidate) => {
+      const dataToValidate = currentData[keyToValidate];
+      const storeErrors = validationResult => {
+        if (containsError(validationResult)) {
+          errors[keyToValidate] = validationResult;
+        }
+      };
+
+      let validateFunction;
+      if (isPlainObject(rulesForKey)) {
+        if (!isPlainObject(dataToValidate)) {
+          validateFunction = () => Promise.resolve(`Property ${keyToValidate} must be an object`);
         } else {
-          const validateEnclosedObject = validator(valueOfKey);
-          error = validateEnclosedObject(dataToValidate);
+          validateFunction = () => createValidator(rulesForKey, wholeData)(dataToValidate).then(storeErrors);
         }
       } else {
-        const validateAttribute = validators.allOfRules(valueOfKey);
-        error = validateAttribute(data[key], data);
+        validateFunction = () => firstError(rulesForKey)(dataToValidate, wholeData).then(storeErrors);
       }
 
-      if (containsError(error)) {
-        errors[key] = error;
-      }
+      return validateFunction;
     });
-    return errors;
+
+    // execute functions from array one by one
+    return validators.reduce((acc, validate) => acc.then(validate), Promise.resolve())
+      .then(() => errors)
+      .then(returnUndefinedOnSuccess);
   };
 };
 
-const asyncValidator = perAttributeRules => {
-  return data => {
-    const errors = {};
-    const promises = [];
-    Object.keys(perAttributeRules).forEach(key => {
-      const valueOfKey = perAttributeRules[key];
-      let validatePromise;
-      if (util.isObject(valueOfKey)) {
-        const dataToValidate = data[key];
-        if (!dataToValidate) {
-          validatePromise = Promise.resolve(`Required property ${key} is missing`);
-        } else {
-          const validateEnclosedObjectAsync = asyncValidator(valueOfKey);
-          validatePromise = validateEnclosedObjectAsync(dataToValidate);
-        }
-      } else {
-        const validateAttributeAsync = validators.allOfRulesAsync(valueOfKey);
-        validatePromise = validateAttributeAsync(data[key], data);
-      }
-
-      validatePromise
-        .then(error => {
-          if (containsError(error)) {
-            errors[key] = error;
-          }
-        });
-      promises.push(validatePromise);
-    });
-    return Promise.all(promises).then(() => errors);
-  };
-};
-
-module.exports = { validator, asyncValidator };
+module.exports = createValidator;

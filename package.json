@@ -1,8 +1,11 @@
 {
   "name": "yeval",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Dead simple javascript validation",
   "main": "index.js",
+  "engines": {
+    "node": "^6.10.0"
+  },
   "scripts": {
     "test": "NODE_ENV=test ./node_modules/mocha/bin/mocha"
   },
@@ -19,8 +22,11 @@
   "bugs": {
     "url": "https://github.com/yktv4/yeval/issues"
   },
+  "dependencies": {
+    "lodash": "^4.17.4"
+  },
   "devDependencies": {
-    "lodash": "^4.17.4",
+    "bluebird": "^3.5.0",
     "mocha": "^3.2.0",
     "should": "^11.2.0"
   },
