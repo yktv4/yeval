@@ -1,6 +1,6 @@
 {
   "name": "yeval",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "description": "Dead simple javascript validation",
   "main": "index.js",
   "engines": {

@@ -41,6 +41,10 @@ const required = value => {
     return 'Required';
   }
 };
+
+// yeval applies such rules like that:
+const error = required(null);
+console.log(error); // 'Required'
 ```
 
 ### Some aspects
