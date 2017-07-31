@@ -78,13 +78,13 @@ const isNumber = (value) => {
 
 const isBoolean = (value) => {
   if (!_.isBoolean(value)) {
-    return 'Must be boolean';
+    return 'Must be a boolean';
   }
 };
 
 const isString = (value) => {
   if (!_.isString(value)) {
-    return 'Must be string';
+    return 'Must be a string';
   }
 };
 
@@ -98,7 +98,7 @@ const oneOfArray = (enumeration) => {
 
 const equals = toWhat => value => {
   if (!_.isEqual(value, toWhat)) {
-    return `Must match ${toWhat}`;
+    return `Must be equal to ${toWhat}`;
   }
 };
 
