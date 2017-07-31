@@ -48,4 +48,6 @@ const createValidator = (perAttributeRules, wholeData = {}) => {
   };
 };
 
-module.exports = createValidator;
+const validate = (rules, data) => createValidator(rules)(data);
+
+module.exports = { createValidator, validate };
