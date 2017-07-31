@@ -13,7 +13,7 @@ const msgFor = (rules, msg) => (value, data) => {
 
   let validatePromise;
   if (isPlainObject(rules)) {
-    const createValidator = require('./create-validator');
+    const { createValidator } = require('./runners');
     validatePromise = createValidator(rules, data)(value);
   } else {
     validatePromise = firstError(castArray(rules))(value, data);
@@ -61,7 +61,7 @@ const when = (predicate, rules) => (value, data) => {
     .then(shouldExecute => {
       if (Boolean(shouldExecute)) {
         if (isPlainObject(rules)) {
-          const createValidator = require('./create-validator');
+          const { createValidator } = require('./runners');
           return createValidator(rules, data)(value);
         } else {
           return firstError(rules)(value, data);
