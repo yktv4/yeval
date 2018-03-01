@@ -16,7 +16,7 @@ const msgFor = (rules, msg) => (value, data) => {
     const { createValidator } = require('./runners');
     validatePromise = createValidator(rules, data)(value);
   } else {
-    validatePromise = firstError(castArray(rules))(value, data);
+    validatePromise = firstError(rules)(value, data);
   }
 
   return validatePromise.then(returnMessageOnError);
@@ -41,8 +41,8 @@ const firstError = rules => {
     // launch validation rules in series
     return rulesToApply.reduce(
       (acc, rule) => {
-        return acc.then(error => {
-          if (error !== undefined) {
+        return acc.then(result => {
+          if (containsError(result)) {
             // if an error was returned by previous rule then don't execute any rules further
             return acc;
           } else {
@@ -83,6 +83,42 @@ const oneOfRules = rules => {
   };
 };
 
+const each = rules => {
+  return (value, data) => {
+    const validateEachElement = value.reduce(
+      (acc, arrayElement) => {
+        let allElementsResultsArray;
+        return acc
+          .then(resultsArray => {
+            allElementsResultsArray = resultsArray;
+
+            let validatePromise;
+            if (isPlainObject(rules)) {
+              const { createValidator } = require('./runners');
+              validatePromise = createValidator(rules, data)(arrayElement);
+            } else {
+              validatePromise = firstError(rules)(arrayElement, data);
+            }
+
+            return validatePromise;
+          })
+          .then(resultForThisElement => {
+            return allElementsResultsArray.concat([resultForThisElement]);
+          });
+      },
+      Promise.resolve([])
+    );
+
+    return validateEachElement
+      .then(result => {
+        if (result.filter(containsError).length > 0) {
+          return result;
+        }
+      })
+  };
+};
+
+
 const containsError = validationResult => validationResult !== undefined;
 
 const isDefined = value => value !== undefined;
@@ -94,4 +130,5 @@ module.exports = {
   msgFor,
   containsError,
   isDefined,
+  each,
 };

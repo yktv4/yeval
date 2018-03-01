@@ -5,8 +5,8 @@ const Promise = require('bluebird');
 const _ = require('lodash');
 const {
   createValidator,
-  util: { oneOfRules, when, msgFor, isDefined },
-  rules: { isString, isInteger, oneOfArray }
+  util: { oneOfRules, when, msgFor, isDefined, each },
+  rules: { isString, isInteger, oneOfArray, minValue }
 } = require('./../index');
 
 describe('Util functions', () => {
@@ -263,6 +263,65 @@ describe('Util functions', () => {
       ])
         .then(() => {
           ruleWasExecuted.should.be.false();
+        });
+    });
+  });
+
+  describe('usage of each util', () => {
+    it('should return undefined in case no error is detected for any element', () => {
+      const validate = createValidator({
+        tags: each([isInteger, minValue(6)]),
+      });
+      return validate({ tags: [6, 7, 8] })
+        .then(errors => {
+          should(errors).be.undefined();
+        });
+    });
+
+    it('should execute the rule for each array element', () => {
+      const validate = createValidator({
+        tags: each([isInteger, minValue(6)]),
+      });
+      return validate({ tags: [5, 6, 'car'] })
+        .then(errors => {
+          should(errors).be.an.Object();
+          should(errors.tags).be.an.Array();
+          should(errors.tags[0]).be.a.String();
+          should(errors.tags[1]).be.undefined();
+          should(errors.tags[2]).be.a.String();
+        });
+    });
+
+    it('should execute the rule for each array element if each array element is an object', () => {
+      const testData = {
+        timePeriods: [
+          { start: '10:00:00', end: '13:00:00' },
+          { start: 123, end: '17:00:00' },
+          { start: '15:00:00', end: 123 },
+        ],
+      };
+      const validate = createValidator({
+        timePeriods: each({
+          start: isString,
+          end: isString,
+        }),
+      });
+      return validate(testData)
+        .then(errors => {
+          console.log(errors);
+          should(errors).be.an.Object();
+          should(errors.timePeriods).be.an.Array();
+          should(errors.timePeriods[0]).be.undefined();
+          
+          const errorForSecondTimePeriod = errors.timePeriods[1];
+          should(errorForSecondTimePeriod).be.an.Object();
+          should(errorForSecondTimePeriod.start).be.a.String();
+          should(errorForSecondTimePeriod.end).be.undefined();
+
+          const errorForThirdTimePeriod = errors.timePeriods[2];
+          should(errorForThirdTimePeriod).be.an.Object();
+          should(errorForThirdTimePeriod.start).be.undefined();
+          should(errorForThirdTimePeriod.end).be.a.String();
         });
     });
   });
