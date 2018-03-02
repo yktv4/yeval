@@ -5,7 +5,7 @@ const Promise = require('bluebird');
 const _ = require('lodash');
 const {
   createValidator,
-  util: { oneOfRules, when },
+  util: { oneOfRules, when, each },
   rules: { isString, isInteger, oneOfArray }
 } = require('./../index');
 
@@ -19,6 +19,10 @@ describe('Validators creation', () => {
         displacement: 4,
         cylinders: 6,
       },
+      availableColors: [
+        { name: 'black', hex: '000' },
+        { name: 'white', hex: 'fff' }
+      ],
     },
     owner: {
       name: 'Rick',
@@ -78,6 +82,48 @@ describe('Validators creation', () => {
         .then(errors => {
           should(errors).be.undefined();
           dealPropertyWasAvailable.should.be.true('"deal" property was not available');
+        });
+    });
+
+    it('should pass the path to currently validated attribute as third argument', () => {
+      const pathShouldBe = expectedPath => (value, data, path) => {
+        if (!_.isEqual(path, expectedPath)) {
+          return `Path should be ${expectedPath} while in fact it is ${path}`;
+        }
+      };
+      let pathForAvailableColorsCounter = 0;
+      const pathInArrayShouldBe = (pathToArray, pathInArrayElement) => (value, data, path) => {
+        const expectedPathInArray = pathToArray
+          .concat([pathForAvailableColorsCounter.toString()])
+          .concat(pathInArrayElement);
+        pathForAvailableColorsCounter++;
+        if (!_.isEqual(path, expectedPathInArray)) {
+          return `Path should be ${expectedPathInArray} while in fact it is ${path}`;
+        }
+      };
+
+      const validate = createValidator({
+        deal: pathShouldBe(['deal']),
+        car: {
+          make: pathShouldBe(['car', 'make']),
+          model: pathShouldBe(['car', 'model']),
+          engine: {
+            displacement: pathShouldBe(['car', 'engine', 'displacement']),
+            cylinders: pathShouldBe(['car', 'engine', 'cylinders']),
+          },
+          availableColors: each({
+            hex: [isString, pathInArrayShouldBe(['car', 'availableColors'], ['hex'])]
+          })
+        },
+        owner: {
+          name: pathShouldBe(['owner', 'name']),
+          surname: pathShouldBe(['owner', 'surname']),
+        },
+      });
+
+      return validate(testValues)
+        .then(errors => {
+          should(errors).be.undefined();
         });
     });
   });

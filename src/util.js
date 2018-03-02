@@ -4,7 +4,7 @@ const { isPlainObject, isFunction, castArray } = require('lodash');
 
 const executeAsync = func => Promise.resolve().then(func);
 
-const msgFor = (rules, msg) => (value, data) => {
+const msgFor = (rules, msg) => (value, data, path) => {
   const returnMessageOnError = validationResult => {
     if (containsError(validationResult)) {
       return msg;
@@ -14,9 +14,9 @@ const msgFor = (rules, msg) => (value, data) => {
   let validatePromise;
   if (isPlainObject(rules)) {
     const { createValidator } = require('./runners');
-    validatePromise = createValidator(rules, data)(value);
+    validatePromise = createValidator(rules, data, path)(value);
   } else {
-    validatePromise = firstError(rules)(value, data);
+    validatePromise = firstError(rules)(value, data, path);
   }
 
   return validatePromise.then(returnMessageOnError);
@@ -24,11 +24,13 @@ const msgFor = (rules, msg) => (value, data) => {
 
 const allErrors = rules => {
   const rulesToApply = castArray(rules);
-  return (value, data) => {
+  return (value, data, path) => {
     // launch validation rules in series
     return rulesToApply.reduce(
       (acc, rule) => {
-        return acc.then(result => executeAsync(() => rule(value, data)).then(Array.prototype.concat.bind(result)));
+        return acc.then(result => {
+          return executeAsync(() => rule(value, data, path)).then(Array.prototype.concat.bind(result));
+        });
       },
       Promise.resolve([])
     );
@@ -37,7 +39,7 @@ const allErrors = rules => {
 
 const firstError = rules => {
   const rulesToApply = castArray(rules);
-  return (value, data) => {
+  return (value, data, path) => {
     // launch validation rules in series
     return rulesToApply.reduce(
       (acc, rule) => {
@@ -46,7 +48,7 @@ const firstError = rules => {
             // if an error was returned by previous rule then don't execute any rules further
             return acc;
           } else {
-            return acc.then(() => executeAsync(() => rule(value, data)));
+            return acc.then(() => executeAsync(() => rule(value, data, path)));
           }
         });
       },
@@ -55,16 +57,16 @@ const firstError = rules => {
   };
 };
 
-const when = (predicate, rules) => (value, data) => {
+const when = (predicate, rules) => (value, data, path) => {
   return Promise.resolve()
-    .then(() => isFunction(predicate) ? predicate(value, data) : predicate)
+    .then(() => isFunction(predicate) ? predicate(value, data, path) : predicate)
     .then(shouldExecute => {
       if (Boolean(shouldExecute)) {
         if (isPlainObject(rules)) {
           const { createValidator } = require('./runners');
-          return createValidator(rules, data)(value);
+          return createValidator(rules, data, path)(value);
         } else {
-          return firstError(rules)(value, data);
+          return firstError(rules)(value, data, path);
         }
       }
     });
@@ -72,8 +74,8 @@ const when = (predicate, rules) => (value, data) => {
 
 const oneOfRules = rules => {
   const rulesToApply = castArray(rules);
-  return (value, data) => {
-    return allErrors(rulesToApply)(value, data)
+  return (value, data, path) => {
+    return allErrors(rulesToApply)(value, data, path)
       .then(errors => {
         // if all rules have failed return the first error
         if (errors.filter(err => !err).length === 0) {
@@ -84,20 +86,22 @@ const oneOfRules = rules => {
 };
 
 const each = rules => {
-  return (value, data) => {
+  return (value, data, path) => {
     const validateEachElement = value.reduce(
-      (acc, arrayElement) => {
+      (acc, currentElement, currentIndex) => {
         let allElementsResultsArray;
         return acc
           .then(resultsArray => {
             allElementsResultsArray = resultsArray;
-
+          })
+          .then(() => {
+            const pathToCurrentElement = path.concat([currentIndex.toString()]);
             let validatePromise;
             if (isPlainObject(rules)) {
               const { createValidator } = require('./runners');
-              validatePromise = createValidator(rules, data)(arrayElement);
+              validatePromise = createValidator(rules, data, pathToCurrentElement)(currentElement);
             } else {
-              validatePromise = firstError(rules)(arrayElement, data);
+              validatePromise = firstError(rules)(currentElement, data, pathToCurrentElement);
             }
 
             return validatePromise;

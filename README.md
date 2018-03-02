@@ -28,10 +28,11 @@ validate({
 
 ### Concept
 
-Any validation rule is a function that returns an error string in case validation fails. Any validation function is provided with two arguments:
+Any validation rule is a function that returns an error string in case validation fails. Any validation function is provided with three arguments:
 
 - `value` -- value of an attribute this rule is declared for
 - `data` -- the whole object that is being validated
+- `path` -- path in `data` to currently validated value
 
 Here's the simplest validation function possible:
 
