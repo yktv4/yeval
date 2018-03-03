@@ -4,7 +4,7 @@ const should = require('should');
 const Promise = require('bluebird');
 const _ = require('lodash');
 const {
-  createValidator,
+  validate,
   util: { oneOfRules, when, each },
   rules: { isString, isInteger, oneOfArray }
 } = require('./../index');
@@ -38,23 +38,24 @@ describe('Validators creation', () => {
 
   describe('handling of objects with enclosed properties', () => {
     it('should perform validation', () => {
-      const validateAsync = createValidator({
-        deal: [isString, notFailingAsyncValidationRule],
-        car: {
-          make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
-          model: [oneOfArray(validModels), notFailingAsyncValidationRule],
-          engine: {
-            displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
-            cylinders: [isInteger, notFailingAsyncValidationRule],
+      return validate(
+        {
+          deal: [isString, notFailingAsyncValidationRule],
+          car: {
+            make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
+            model: [oneOfArray(validModels), notFailingAsyncValidationRule],
+            engine: {
+              displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
+              cylinders: [isInteger, notFailingAsyncValidationRule],
+            },
+          },
+          owner: {
+            name: [isString, notFailingAsyncValidationRule],
+            surname: [isString, notFailingAsyncValidationRule],
           },
         },
-        owner: {
-          name: [isString, notFailingAsyncValidationRule],
-          surname: [isString, notFailingAsyncValidationRule],
-        },
-      });
-
-      return validateAsync(testValues)
+        testValues
+      )
         .then(errors => {
           should(errors).be.undefined();
         });
@@ -68,17 +69,18 @@ describe('Validators creation', () => {
         }
       };
 
-      const validateAsync = createValidator({
-        deal: isString,
-        car: {
-          make: [oneOfArray(validMakes), validateEnclosedObject],
-          engine: {
-            cylinders: validateEnclosedObject,
+      return validate(
+        {
+          deal: isString,
+          car: {
+            make: [oneOfArray(validMakes), validateEnclosedObject],
+            engine: {
+              cylinders: validateEnclosedObject,
+            },
           },
         },
-      });
-
-      return validateAsync(testValues)
+        testValues
+      )
         .then(errors => {
           should(errors).be.undefined();
           dealPropertyWasAvailable.should.be.true('"deal" property was not available');
@@ -102,26 +104,27 @@ describe('Validators creation', () => {
         }
       };
 
-      const validate = createValidator({
-        deal: pathShouldBe(['deal']),
-        car: {
-          make: pathShouldBe(['car', 'make']),
-          model: pathShouldBe(['car', 'model']),
-          engine: {
-            displacement: pathShouldBe(['car', 'engine', 'displacement']),
-            cylinders: pathShouldBe(['car', 'engine', 'cylinders']),
+      return validate(
+        {
+          deal: pathShouldBe(['deal']),
+          car: {
+            make: pathShouldBe(['car', 'make']),
+            model: pathShouldBe(['car', 'model']),
+            engine: {
+              displacement: pathShouldBe(['car', 'engine', 'displacement']),
+              cylinders: pathShouldBe(['car', 'engine', 'cylinders']),
+            },
+            availableColors: each({
+              hex: [isString, pathInArrayShouldBe(['car', 'availableColors'], ['hex'])]
+            })
           },
-          availableColors: each({
-            hex: [isString, pathInArrayShouldBe(['car', 'availableColors'], ['hex'])]
-          })
+          owner: {
+            name: pathShouldBe(['owner', 'name']),
+            surname: pathShouldBe(['owner', 'surname']),
+          },
         },
-        owner: {
-          name: pathShouldBe(['owner', 'name']),
-          surname: pathShouldBe(['owner', 'surname']),
-        },
-      });
-
-      return validate(testValues)
+        testValues
+      )
         .then(errors => {
           should(errors).be.undefined();
         });
@@ -129,27 +132,28 @@ describe('Validators creation', () => {
   });
 
   it('should populate errors object correctly when validation fails', () => {
-    const validateAsync = createValidator({
-      deal: [isString, failingAsyncValidationRule],
-      car: {
-        make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
-        model: [oneOfArray(validModels), notFailingAsyncValidationRule],
-        engine: {
-          displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
-          cylinders: [isInteger, failingAsyncValidationRule],
-        },
-      },
-      owner: {
-        name: [isString, notFailingAsyncValidationRule],
-        surname: [isString, notFailingAsyncValidationRule],
-      },
-    });
-
     const thisCaseTestValues = _.cloneDeep(testValues);
     delete thisCaseTestValues.car.engine.cylinders;
     delete thisCaseTestValues.deal;
 
-    return validateAsync(thisCaseTestValues)
+    return validate(
+      {
+        deal: [isString, failingAsyncValidationRule],
+        car: {
+          make: [oneOfArray(validMakes), notFailingAsyncValidationRule],
+          model: [oneOfArray(validModels), notFailingAsyncValidationRule],
+          engine: {
+            displacement: [isInteger, oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule])],
+            cylinders: [isInteger, failingAsyncValidationRule],
+          },
+        },
+        owner: {
+          name: [isString, notFailingAsyncValidationRule],
+          surname: [isString, notFailingAsyncValidationRule],
+        },
+      },
+      thisCaseTestValues
+    )
       .then(errors => {
         should(errors).be.an.Object();
         Object.keys(errors).should.have.lengthOf(2);
@@ -174,7 +178,7 @@ describe('Validators creation', () => {
       return Promise.resolve();
     });
 
-    return createValidator({ someName: [firstRule, secondRule] })({ someName: 'someValue' })
+    return validate({ someName: [firstRule, secondRule] }, { someName: 'someValue' })
       .then(errors => {
         should(errors).be.undefined();
         secondRuleWasExecutedAfterFirst.should.be.true();
@@ -190,7 +194,7 @@ describe('Validators creation', () => {
       return Promise.resolve();
     };
 
-    return createValidator({ someName: [firstRule, secondRule] })({ someName: 'someValue' })
+    return validate({ someName: [firstRule, secondRule] }, { someName: 'someValue' })
       .then(errors => {
         should(errors).be.an.Object();
         errors.should.have.property('someName');
