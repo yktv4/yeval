@@ -1,5 +1,3 @@
-'use strict';
-
 const { isPlainObject, isFunction, isArray, castArray, isEmpty, map } = require('lodash');
 
 const isDefined = value => value !== undefined;
@@ -29,13 +27,17 @@ const createValidator = (rule, data, path = []) => value => {
  */
 const validatePlainObject = (rules) => {
   const returnUndefinedOnSuccess = errors => Object.keys(errors).length === 0 ? undefined : errors;
-  return (value, data, path = []) => {
+  return async (value, data, path = []) => {
+    if (!isPlainObject(value)) {
+      return `Property ${path.join('.')} must be an object`;
+    }
+
     // if no data passed as second parameter, assume current value is all the data
     data = isEmpty(data) ? value : data;
     const errors = {};
     // create an array of functions that will validate each attribute
     const validators = map(rules, (rulesForKey, keyToValidate) => {
-      const pathToCurrentKey = path.concat([keyToValidate]);
+      const pathToCurrentKey = path.concat(keyToValidate);
       const dataToValidate = value[keyToValidate];
       const storeErrors = validationResult => {
         if (containsError(validationResult)) {
@@ -47,25 +49,28 @@ const validatePlainObject = (rules) => {
     });
 
     // execute functions from array one by one
-    return validators.reduce((acc, validate) => acc.then(validate), Promise.resolve())
-      .then(() => errors)
-      .then(returnUndefinedOnSuccess);
+    await validators.reduce((acc, validate) => acc.then(validate), Promise.resolve());
+    if (Object.keys(errors).length !== 0) {
+      return errors
+    }
   };
 };
 
-const msgFor = (rules, msg) => (value, data, path) => {
-  const returnMessageOnError = validationResult => containsError(validationResult) ? msg : undefined;
-  return createValidator(rules, data, path)(value).then(returnMessageOnError);
+const msgFor = (rules, msg) => async (value, data, path) => {
+  const result = await createValidator(rules, data, path)(value);
+  if (containsError(result)) {
+    return msg;
+  }
 };
 
 const allErrors = rules => {
   return (value, data, path) => {
     // launch validation rules in series
     return rules.reduce(
-      (acc, rule) => {
-        return acc.then(result => {
-          return createValidator(rule, data, path)(value).then(Array.prototype.concat.bind(result));
-        });
+      async (getPreviousErrors, rule) => {
+        const previousErrors = await getPreviousErrors;
+        const errorForCurrentRule = await createValidator(rule, data, path)(value);
+        return previousErrors.concat(errorForCurrentRule);
       },
       Promise.resolve([])
     );
@@ -77,75 +82,66 @@ const firstError = rules => {
   return (value, data, path) => {
     // launch validation rules in series
     return rulesArray.reduce(
-      (acc, rule) => {
-        return acc.then(result => {
-          if (containsError(result)) {
-            // if an error was returned by previous rule then don't execute any rules further
-            return acc;
-          } else {
-            return createValidator(rule, data, path)(value);
-          }
-        });
+      async (getPreviousResult, rule) => {
+        const previousResult = await getPreviousResult;
+        if (containsError(previousResult)) {
+          // if an error was returned by previous rule then don't execute any rules further
+          return previousResult;
+        }
+
+        return createValidator(rule, data, path)(value);
       },
       Promise.resolve()
     );
   };
 };
 
-const when = (predicate, rules) => (value, data, path) => {
-  return executeAsync(() => isFunction(predicate) ? predicate(value, data, path) : predicate)
-    .then(shouldExecute => {
-      if (Boolean(shouldExecute)) {
-        return createValidator(rules, data, path)(value);
-      }
-    });
+const when = (predicate, rules) => async (value, data, path) => {
+  const shouldExecute = await executeAsync(() => isFunction(predicate) ? predicate(value, data, path) : predicate);
+  if (Boolean(shouldExecute)) {
+    return createValidator(rules, data, path)(value);
+  }
 };
 
 const oneOfRules = rules => {
   const rulesArray = castArray(rules);
-  return (value, data, path) => {
-    return allErrors(rulesArray)(value, data, path)
-      .then(errors => {
-        // if all rules have failed return the first error
-        if (errors.filter(err => !err).length === 0) {
-          return errors.filter(err => !!err)[0];
-        }
-      });
+  return async (value, data, path) => {
+    const results = await allErrors(rulesArray)(value, data, path);
+
+    // if all rules have failed return the first error
+    const resultsContainingErrors = results.filter(containsError);
+    if (resultsContainingErrors.length === rulesArray.length) {
+      return resultsContainingErrors[0];
+    }
   };
 };
 
 const each = rules => {
-  const returnUndefinedOnSuccess = result => result.filter(containsError).length > 0 ? result : undefined;
-  return (value, data, path = []) => {
+  return async (value, data, path = []) => {
     const validateEachElement = value.reduce(
-      (acc, currentElement, currentIndex) => {
-        let allElementsResultsArray;
-        return acc
-          .then(resultsArray => {
-            allElementsResultsArray = resultsArray;
-          })
-          .then(() => {
-            const pathToCurrentElement = path.concat([currentIndex.toString()]);
-            return createValidator(rules, data, pathToCurrentElement)(currentElement);
-          })
-          .then(resultForThisElement => {
-            return allElementsResultsArray.concat([resultForThisElement]);
-          });
+      async (getPreviousResults, currentElement, currentIndex) => {
+        const previousResults = await getPreviousResults;
+        const pathToCurrentElement = path.concat(currentIndex.toString());
+        const currentResult = await createValidator(rules, data, pathToCurrentElement)(currentElement);
+        return previousResults.concat(currentResult);
       },
       Promise.resolve([])
     );
 
-    return validateEachElement.then(returnUndefinedOnSuccess);
+    const results = await validateEachElement;
+    if (results.filter(containsError).length > 0) {
+      return results;
+    }
   };
 };
 
 module.exports = {
   oneOfRules,
   when,
-  firstError,
   msgFor,
   isDefined,
   each,
   createValidator,
   validatePlainObject,
+  containsError,
 };

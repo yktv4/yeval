@@ -1,15 +1,13 @@
-'use strict';
-
 const should = require('should');
-const Promise = require('bluebird');
+const bluebird = require('bluebird');
 const _ = require('lodash');
 const {
   validate,
-  util: { oneOfRules, when, each },
+  util: { oneOfRules, each },
   rules: { isString, isInteger, oneOfArray }
 } = require('./../index');
 
-describe('Validators creation', () => {
+describe('Behavior of validate function', () => {
   const testValues = {
     deal: 'purchase',
     car: {
@@ -36,9 +34,9 @@ describe('Validators creation', () => {
   const validMakes = ['BMW', 'Mercedes', 'Audi'];
   const validModels = ['3-er', '5-er', '7-er'];
 
-  describe('handling of objects with enclosed properties', () => {
-    it('should perform validation', () => {
-      return validate(
+  describe('handling of nested objects', () => {
+    it('should perform validation', async () => {
+      const errors = await validate(
         {
           deal: [isString, notFailingAsyncValidationRule],
           car: {
@@ -55,39 +53,60 @@ describe('Validators creation', () => {
           },
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.undefined();
-        });
+      );
+
+      should(errors).be.undefined();
     });
 
-    it('should pass the whole form data as second argument', () => {
+    it('should return error if anything else is found instead of nested object', async () => {
+      const errors = await validate(
+        {
+          notDefinedProperty: {
+            someKey: isString,
+          },
+          car: {
+            notDefinedProperty: {
+              someKey: isString,
+            }
+          }
+        },
+        testValues
+      );
+
+      should(errors).containEql({
+        notDefinedProperty: 'Property notDefinedProperty must be an object',
+        car: {
+          notDefinedProperty: 'Property car.notDefinedProperty must be an object',
+        }
+      });
+    });
+
+    it('should pass the whole form data as second argument', async () => {
       let dealPropertyWasAvailable = true;
-      const validateEnclosedObject = (value, data) => {
+      const validateNestedObject = (value, data) => {
         if (data.deal !== testValues.deal) {
           dealPropertyWasAvailable = false;
         }
       };
 
-      return validate(
+      const errors = await validate(
         {
           deal: isString,
           car: {
-            make: [oneOfArray(validMakes), validateEnclosedObject],
+            make: [oneOfArray(validMakes), validateNestedObject],
             engine: {
-              cylinders: validateEnclosedObject,
+              cylinders: validateNestedObject,
             },
           },
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.undefined();
-          dealPropertyWasAvailable.should.be.true('"deal" property was not available');
-        });
+      );
+
+      should(errors).be.undefined();
+      dealPropertyWasAvailable.should.be.true('"deal" property was not available');
     });
 
-    it('should pass the path to currently validated attribute as third argument', () => {
+    it('should pass the path to currently validated attribute as third argument', async () => {
       const pathShouldBe = expectedPath => (value, data, path) => {
         if (!_.isEqual(path, expectedPath)) {
           return `Path should be ${expectedPath} while in fact it is ${path}`;
@@ -104,7 +123,7 @@ describe('Validators creation', () => {
         }
       };
 
-      return validate(
+      const errors = await validate(
         {
           deal: pathShouldBe(['deal']),
           car: {
@@ -124,19 +143,18 @@ describe('Validators creation', () => {
           },
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.undefined();
-        });
+      );
+
+      should(errors).be.undefined();
     });
   });
 
-  it('should populate errors object correctly when validation fails', () => {
+  it('should populate errors object correctly when validation fails', async () => {
     const thisCaseTestValues = _.cloneDeep(testValues);
     delete thisCaseTestValues.car.engine.cylinders;
     delete thisCaseTestValues.deal;
 
-    return validate(
+    const errors = await validate(
       {
         deal: [isString, failingAsyncValidationRule],
         car: {
@@ -153,21 +171,20 @@ describe('Validators creation', () => {
         },
       },
       thisCaseTestValues
-    )
-      .then(errors => {
-        should(errors).be.an.Object();
-        Object.keys(errors).should.have.lengthOf(2);
+    );
 
-        errors.car.engine.cylinders.should.be.a.String();
-        errors.deal.should.be.a.String();
-      });
+    should(errors).be.an.Object();
+    Object.keys(errors).should.have.lengthOf(2);
+
+    errors.car.engine.cylinders.should.be.a.String();
+    errors.deal.should.be.a.String();
   });
 
-  it('should perform a validation of an attribute in series by default', () => {
+  it('should perform a validation of an attribute in series by default', async () => {
     let firstRuleWasExecuted = false;
     let secondRuleWasExecutedAfterFirst = false;
 
-    const firstRule = () => Promise.delay(20).then(() => {
+    const firstRule = () => bluebird.delay(20).then(() => {
       firstRuleWasExecuted = true;
       return Promise.resolve();
     });
@@ -178,14 +195,13 @@ describe('Validators creation', () => {
       return Promise.resolve();
     });
 
-    return validate({ someName: [firstRule, secondRule] }, { someName: 'someValue' })
-      .then(errors => {
-        should(errors).be.undefined();
-        secondRuleWasExecutedAfterFirst.should.be.true();
-      });
+    const errors = await validate({ someName: [firstRule, secondRule] }, { someName: 'someValue' });
+
+    should(errors).be.undefined();
+    secondRuleWasExecutedAfterFirst.should.be.true();
   });
 
-  it('should stop execution of rules for attribute on first error by default', () => {
+  it('should stop execution of rules for attribute on first error by default', async () => {
     let secondRuleWasExecuted = false;
 
     const firstRule = () => Promise.resolve('Some error description');
@@ -194,11 +210,10 @@ describe('Validators creation', () => {
       return Promise.resolve();
     };
 
-    return validate({ someName: [firstRule, secondRule] }, { someName: 'someValue' })
-      .then(errors => {
-        should(errors).be.an.Object();
-        errors.should.have.property('someName');
-        secondRuleWasExecuted.should.be.false();
-      });
+    const errors = await validate({ someName: [firstRule, secondRule] }, { someName: 'someValue' });
+
+    should(errors).be.an.Object();
+    errors.should.have.property('someName');
+    secondRuleWasExecuted.should.be.false();
   });
 });

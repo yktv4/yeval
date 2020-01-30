@@ -1,11 +1,19 @@
-'use strict';
-
 const should = require('should');
-const Promise = require('bluebird');
 const {
   validate,
-  util: { oneOfRules, when, msgFor, isDefined, each },
-  rules: { isString, isInteger, oneOfArray, minValue }
+  util: {
+    oneOfRules,
+    when,
+    msgFor,
+    isDefined,
+    each,
+  },
+  rules: {
+    isString,
+    isInteger,
+    oneOfArray,
+    minValue,
+  },
 } = require('./../index');
 
 describe('Util functions', () => {
@@ -33,14 +41,14 @@ describe('Util functions', () => {
   const validModels = ['3-er', '5-er', '7-er'];
 
   describe('usage of when util', () => {
-    it('should not execute enclosed object rules if predicate is false', () => {
+    it('should not execute nested object rules if predicate is false', async () => {
       let validationOfCarWasPerformed = false;
 
       const validateCar = () => {
         validationOfCarWasPerformed = true;
         return Promise.resolve('Some error description');
       };
-      return validate(
+      const errors = await validate(
         {
           deal: [isString],
           car: when(false, {
@@ -57,14 +65,13 @@ describe('Util functions', () => {
           },
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.undefined();
-          validationOfCarWasPerformed.should.be.false();
-        });
+      );
+
+      should(errors).be.undefined();
+      validationOfCarWasPerformed.should.be.false();
     });
 
-    it('should execute enclosed object rules if predicate is true', () => {
+    it('should execute nested object rules if predicate is true', async () => {
       const errorDescription = 'Some error description';
       let validationOfCarWasPerformed = false;
 
@@ -72,7 +79,7 @@ describe('Util functions', () => {
         validationOfCarWasPerformed = true;
         return Promise.resolve(errorDescription);
       };
-      return validate(
+      const errors = await validate(
         {
           deal: isString,
           car: when(true, {
@@ -89,31 +96,28 @@ describe('Util functions', () => {
           },
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.Object();
-          errors.should.containEql({
-            car: {
-              make: errorDescription,
-              model: errorDescription,
-              engine: {
-                displacement: errorDescription,
-                cylinders: errorDescription,
-              },
-            },
-          });
-          validationOfCarWasPerformed.should.be.true();
-        });
+      );
+
+      should(errors).be.Object();
+      errors.should.containEql({
+        car: {
+          make: errorDescription,
+          model: errorDescription,
+          engine: {
+            displacement: errorDescription,
+            cylinders: errorDescription,
+          },
+        },
+      });
+      validationOfCarWasPerformed.should.be.true();
     });
 
-    it('should not execute any rules if promise is supplied that resolves with falsy value', () => {
-      return validate({ make: when(Promise.resolve(false), isString) }, { make: 123 })
-        .then(errors => {
-          should(errors).be.undefined();
-        });
+    it('should not execute any rules if promise is supplied that resolves with falsy value', async () => {
+      const errors = await validate({ make: when(Promise.resolve(false), isString) }, { make: 123 });
+      should(errors).be.undefined();
     });
 
-    it('should pass whole data if `when` is applied within an enclosed object', () => {
+    it('should pass whole data if `when` is applied within an nested object', async () => {
       let dealPropertyWasAvailable = true;
       const returnsTrue = (value, data) => {
         if (data.deal !== testValues.deal) {
@@ -122,7 +126,7 @@ describe('Util functions', () => {
         return true;
       };
 
-      return validate(
+      const errors = await validate(
         {
           deal: isString,
           car: when(returnsTrue, {
@@ -133,36 +137,33 @@ describe('Util functions', () => {
           }),
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.undefined();
-          dealPropertyWasAvailable.should.be.true('"deal" property was not available');
-        });
+      );
+
+      should(errors).be.undefined();
+      dealPropertyWasAvailable.should.be.true('"deal" property was not available');
     });
   });
 
   describe('usage of msgFor util', () => {
     const customErrorMessage = 'Custom error message';
 
-    it('should allow for async rules', () => {
-      return validate({ make: msgFor(failingAsyncValidationRule, customErrorMessage) }, { make: 'some value' })
-        .then(errors => {
-          should(errors).be.an.Object();
-          errors.make.should.be.a.String();
-          errors.make.should.eql(customErrorMessage);
-        });
+    it('should allow for async rules', async () => {
+      const errors = await validate({ make: msgFor(failingAsyncValidationRule, customErrorMessage) }, { make: 'some value' });
+
+      should(errors).be.an.Object();
+      errors.make.should.be.a.String();
+      errors.make.should.eql(customErrorMessage);
     });
 
-    it('should allow for enclosed objects', () => {
-      return validate({ car: msgFor({ make: failingAsyncValidationRule }, customErrorMessage) }, { car: {} })
-        .then(errors => {
-          should(errors).be.an.Object();
-          errors.car.should.be.a.String();
-          errors.car.should.eql(customErrorMessage);
-        });
+    it('should allow for nested objects', async () => {
+      const errors = await validate({ car: msgFor({ make: failingAsyncValidationRule }, customErrorMessage) }, { car: {} });
+
+      should(errors).be.an.Object();
+      errors.car.should.be.a.String();
+      errors.car.should.eql(customErrorMessage);
     });
 
-    it('should pass whole data if `msgFor` is applied within an enclosed object', () => {
+    it('should pass whole data if `msgFor` is applied within an nested object', async () => {
       const customErrorMessage = 'Custom error message';
       let dealPropertyWasAvailable = true;
       const notFailingRule = (value, data) => {
@@ -171,7 +172,7 @@ describe('Util functions', () => {
         }
       };
 
-      return validate(
+      const errors = await validate(
         {
           deal: isString,
           car: msgFor({
@@ -182,19 +183,18 @@ describe('Util functions', () => {
           }, customErrorMessage),
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.undefined();
-          dealPropertyWasAvailable.should.be.true('"deal" property was not available');
-        });
+      );
+
+      should(errors).be.undefined();
+      dealPropertyWasAvailable.should.be.true('"deal" property was not available');
     });
   });
 
   describe('usage of oneOfRules util', () => {
-    it('should return the first error message if all rules have failed', () => {
+    it('should return the first error message if all rules have failed', async () => {
       const genericRule = oneOfRules([failingAsyncValidationRule, failingAsyncValidationRule]);
 
-      return validate(
+      const errors = await validate(
         {
           deal: [isString, genericRule],
           car: {
@@ -207,19 +207,18 @@ describe('Util functions', () => {
           },
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.an.Object();
-          should(errors).have.property('deal').String();
-          should(errors).have.propertyByPath('car', 'engine', 'displacement').String();
-          should(errors).have.propertyByPath('owner', 'name').String();
-        });
+      );
+
+      should(errors).be.an.Object();
+      should(errors).have.property('deal').String();
+      should(errors).have.propertyByPath('car', 'engine', 'displacement').String();
+      should(errors).have.propertyByPath('owner', 'name').String();
     });
 
-    it('should return undefined if any rule has passed', () => {
+    it('should return undefined if any rule has passed', async () => {
       const genericRule = oneOfRules([notFailingAsyncValidationRule, failingAsyncValidationRule]);
 
-      return validate(
+      const errors = await validate(
         {
           deal: [isString, genericRule],
           car: {
@@ -232,63 +231,56 @@ describe('Util functions', () => {
           },
         },
         testValues
-      )
-        .then(errors => {
-          should(errors).be.an.undefined();
-        });
+      );
+
+      should(errors).be.undefined();
     });
   });
 
   describe('usage of isDefined util', () => {
-    it('should execute the rule if attribute is not undefined', () => {
+    it('should execute the rule if attribute is not undefined', async () => {
       let ruleWasExecuted = false;
       const optionalRule = () => {
         ruleWasExecuted = true;
       };
 
-      return validate({ email: when(isDefined, optionalRule) }, { email: 123 })
-        .then(() => {
-          ruleWasExecuted.should.be.true();
-        });
+      await validate({ email: when(isDefined, optionalRule) }, { email: 123 });
+      ruleWasExecuted.should.be.true();
     });
 
-    it('should not execute the rule if attribute is undefined', () => {
+    it('should not execute the rule if attribute is undefined', async () => {
       let ruleWasExecuted = false;
       const optionalRule = () => {
         ruleWasExecuted = true;
       };
       const optionalRules = { email: when(isDefined, optionalRule) };
 
-      Promise.all([
+      await Promise.all([
         validate(optionalRules, { email: undefined }),
         validate(optionalRules, {}),
-      ])
-        .then(() => {
-          ruleWasExecuted.should.be.false();
-        });
+      ]);
+
+      ruleWasExecuted.should.be.false();
     });
   });
 
   describe('usage of each util', () => {
-    it('should return undefined in case no error is detected for any element', () => {
-      return validate({ tags: each([isInteger, minValue(6)]) }, { tags: [6, 7, 8] })
-        .then(errors => {
-          should(errors).be.undefined();
-        });
+    it('should return undefined in case no error is detected for any element', async () => {
+      const errors = await validate({ tags: each([isInteger, minValue(6)]) }, { tags: [6, 7, 8] });
+      should(errors).be.undefined();
     });
 
-    it('should execute the rule for each array element', () => {
-      return validate({ tags: each([isInteger, minValue(6)]) }, { tags: [5, 6, 'car'] })
-        .then(errors => {
-          should(errors).be.an.Object();
-          should(errors.tags).be.an.Array();
-          should(errors.tags[0]).be.a.String();
-          should(errors.tags[1]).be.undefined();
-          should(errors.tags[2]).be.a.String();
-        });
+    it('should execute the rule for each array element', async () => {
+      const errors = await validate({ tags: each([isInteger, minValue(6)]) }, { tags: [5, 6, 'car'] });
+
+      should(errors).be.an.Object();
+      should(errors.tags).be.an.Array();
+      should(errors.tags[0]).be.a.String();
+      should(errors.tags[1]).be.undefined();
+      should(errors.tags[2]).be.a.String();
     });
 
-    it('should execute the rule for each array element if each array element is an object', () => {
+    it('should execute the rule for each array element if each array element is an object', async () => {
       const testData = {
         timePeriods: [
           { start: '10:00:00', end: '13:00:00' },
@@ -296,7 +288,8 @@ describe('Util functions', () => {
           { start: '15:00:00', end: 123 },
         ],
       };
-      return validate(
+
+      const errors = await validate(
         {
           timePeriods: each({
             start: isString,
@@ -304,22 +297,21 @@ describe('Util functions', () => {
           }),
         },
         testData
-      )
-        .then(errors => {
-          should(errors).be.an.Object();
-          should(errors.timePeriods).be.an.Array();
-          should(errors.timePeriods[0]).be.undefined();
-          
-          const errorForSecondTimePeriod = errors.timePeriods[1];
-          should(errorForSecondTimePeriod).be.an.Object();
-          should(errorForSecondTimePeriod.start).be.a.String();
-          should(errorForSecondTimePeriod.end).be.undefined();
+      );
 
-          const errorForThirdTimePeriod = errors.timePeriods[2];
-          should(errorForThirdTimePeriod).be.an.Object();
-          should(errorForThirdTimePeriod.start).be.undefined();
-          should(errorForThirdTimePeriod.end).be.a.String();
-        });
+      should(errors).be.an.Object();
+      should(errors.timePeriods).be.an.Array();
+
+      const [errorsForFirstTimePeriod, errorForSecondTimePeriod, errorForThirdTimePeriod] = errors.timePeriods;
+      should(errorsForFirstTimePeriod).be.undefined();
+
+      should(errorForSecondTimePeriod).be.an.Object();
+      should(errorForSecondTimePeriod.start).be.a.String();
+      should(errorForSecondTimePeriod.end).be.undefined();
+
+      should(errorForThirdTimePeriod).be.an.Object();
+      should(errorForThirdTimePeriod.start).be.undefined();
+      should(errorForThirdTimePeriod.end).be.a.String();
     });
   });
 });
