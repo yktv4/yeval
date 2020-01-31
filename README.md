@@ -1,4 +1,5 @@
 # yeval
+[![<yktv4>](https://img.shields.io/circleci/build/gh/yktv4/yeval)](<https://circleci.com/gh/yktv4/yeval>)
 
 Dead simple JavaScript schema validation.
 
