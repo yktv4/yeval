@@ -1,10 +1,9 @@
 'use strict';
 
-const runners = require('./src/runners');
+const util = require('./src/util');
 
 module.exports = {
-  createValidator: runners.createValidator,
-  validate: runners.validate,
+  validate: (rules, value) => util.createValidator(rules)(value),
   rules: require('./src/rules'),
-  util: require('./src/util'),
+  util,
 };

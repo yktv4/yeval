@@ -1,10 +1,10 @@
 {
   "name": "yeval",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Dead simple javascript validation",
   "main": "index.js",
   "engines": {
-    "node": "^6.10.0"
+    "node": "^8.17.0"
   },
   "scripts": {
     "test": "NODE_ENV=test ./node_modules/mocha/bin/mocha"
